@@ -12,5 +12,6 @@
 <p>4.DB安裝 https://www.mysql.com/downloads/<p>
 
 # 說明
+<p>./client  客端畫面<p>
 <p>./im  聊天室主程式<p>
 <p>./gm  slot主程式<p>
