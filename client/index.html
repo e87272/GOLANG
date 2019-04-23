@@ -128,8 +128,7 @@
 		var scheme = document.location.protocol == "https:" ? "wss" : "ws";
 		var port = document.location.port ? (":" + document.location.port) : "";
 		// see app.Get("/echo", ws.Handler()) on main.go
-		//var wsURL = scheme + "://" + document.location.hostname + port+"/echo";
-		var wsURL = "127.0.0.1:8080/echo";
+		var wsURL = scheme + "://" + document.location.hostname + port+"/echo";
 		var output = document.getElementById("output");
 		// Ws comes from the auto-served '/iris-ws.js'
 		var socket = new Ws(wsURL);
