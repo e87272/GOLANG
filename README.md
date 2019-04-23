@@ -1,9 +1,9 @@
 # GOLANG
 
 # 架構
-1.前端使用H5 + websocket
-2.server端使用go + iris套件
-3.DB使用mySQL
+<p>1.前端使用H5 + websocket<p>
+<p>2.server端使用go + iris套件<p><p>
+<p>3.DB使用mySQL<p>
 
 # 建置
 <p>1.安裝GO https://golang.org/dl/<p>
