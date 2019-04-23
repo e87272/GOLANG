@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>777</title>
+		<style>
+		table {
+		  border-collapse: collapse;
+		}
+		td, th {
+		  border: 1px solid #000000;
+		}
+		</style>
+	</head>
+	<body>
+		<table>
+			<tr>
+				<td name = "reelStrip0">金7</td>
+				<td name = "reelStrip1">金7</td>
+				<td name = "reelStrip2">金7</td>
+			</tr>
+		</table>
+		<br>	
+			times:<input type="text" name="times" value="1" ><br>
+			<input type="button" onclick = "play()" value = "play">  <br>
+		<table>
+			<tr>
+				<td>總輸贏</td>
+				<td name = "result">0</td>
+			</tr>
+			<tr>
+				<td>金7</td>
+				<td name = "win1_1_1_">0</td>
+			</tr>
+			<tr>
+				<td>紅7</td>
+				<td name = "win2_2_2_">0</td>
+			</tr>
+			<tr>
+				<td>藍7</td>
+				<td name = "win3_3_3_">0</td>
+			</tr>
+			<tr>
+				<td>綠7</td>
+				<td name = "win4_4_4_">0</td>
+			</tr>
+			<tr>
+				<td>3bar</td>
+				<td name = "win5_5_5_">0</td>
+			</tr>
+			<tr>
+				<td>2bar</td>
+				<td name = "win6_6_6_">0</td>
+			</tr>
+			<tr>
+				<td>1bar</td>
+				<td name = "win7_7_7_">0</td>
+			</tr>
+			<tr>
+				<td>any7</td>
+				<td name = "winA_A_A_">0</td>
+			</tr>
+			<tr>
+				<td>anyBar</td>
+				<td name = "winB_B_B_">0</td>
+			</tr>
+			<tr>
+				<td>lose</td>
+				<td name = "lose">0</td>
+			</tr>
+		</table>
+		<!-- the messages will be shown here -->
+		<pre id="output"></pre>
+		
+		<div id="join">
+			<!-- the message's input -->
+			輸入暱稱:<input id="nickname" type="text" />
+			<!-- when clicked then an iris websocket event will be sent to the server, at this example we registered the 'chat' -->
+			<button onclick="join()">Join</button>
+		</div>
+		
+		<div id="joinroom" hidden>
+			<!-- the message's input -->
+			roomname:<input id="roomName" type="text" />
+			<!-- when clicked then an iris websocket event will be sent to the server, at this example we registered the 'chat' -->
+			<button onclick="joinRoom()">joinRoom</button>
+		</div>
+		
+		<button id="leaveRoom" onclick="leaveRoom()" hidden>leaveRoom</button>
+		
+		<div id="sendmsg" hidden>
+			<input id="msg" type="text" />
+			<button onclick="send()">Send</button>
+		</div>
+		
+		<pre id="im"></pre>
+		
+		<script src="/iris-ws.js"></script>
+		<script src="/im.js"></script>
+		
+	  <script>
+		var result = [];
+		var winTimes = {}
+		/**
+		進行遊戲
+		*/
+		function play(){
+			result = [];
+			winTimes = {};
+			var i;
+			var odds = {"1_1_1_":100,"2_2_2_":40,"3_3_3_":20,"4_4_4_":10,"5_5_5_":10,"6_6_6_":5,"7_7_7_":4,"A_A_A_":5,"B_B_B_":3};
+			var oddsKey = Object.keys(odds);
+			//重置中獎次數
+			for( i = 0 ; i < oddsKey.length ; i++){
+				winTimes[oddsKey[i]] = 0;
+			}
+			winTimes["lose"] = 0;
+			//遊戲次數
+			var times = document.getElementsByName("times")[0].value;
+			for(var i = 0 ; i < times ; i++){
+				//顯示轉輪畫面
+				var showReelSymbol = (i == times-1);
+				msg = "101_$_" +  i + "_$_1" 
+				socket.Emit("gmsocket", msg);
+			}
+		}
+		
+		var scheme = document.location.protocol == "https:" ? "wss" : "ws";
+		var port = document.location.port ? (":" + document.location.port) : "";
+		// see app.Get("/echo", ws.Handler()) on main.go
+		//var wsURL = scheme + "://" + document.location.hostname + port+"/echo";
+		var wsURL = "127.0.0.1:8080/echo";
+		var output = document.getElementById("output");
+		// Ws comes from the auto-served '/iris-ws.js'
+		var socket = new Ws(wsURL);
+		
+		function InitWebsocket() {
+			socket = new Ws(wsURL);
+			var wsTimeout;
+			var reconnectInterval= 5000;
+
+			socket.OnConnect(function() {
+				output.innerHTML = "Status: Connected\n";
+				clearTimeout(wsTimeout);
+			});
+
+			socket.OnDisconnect(function() {
+				output.innerHTML = "Status: Disconnected\n";
+				wsTimeout = setTimeout(function() {
+					output.innerHTML = "Status: Reconnected\n";
+					InitWebsocket();
+				}, reconnectInterval);
+			});
+			// read events from the server
+			socket.On("gmsocket", function (msg) {
+				receiveGMPacket(JSON.parse(msg));
+				//addMessage(msg);
+			});
+			
+			socket.On("imsocket", function (msg) {
+				receiveIMPacket(JSON.parse(msg));
+				//addMessage(msg);
+			});
+		}
+		
+		function addMessage(msg) {
+			output.innerHTML += msg + "\n";
+		}
+		
+		function receiveGMPacket(GMPacket) {
+			switch(GMPacket.Cmdid){
+				case "101":
+				winStr = GMPacket.Msg;
+				var odds = {"1_1_1_":100,"2_2_2_":40,"3_3_3_":20,"4_4_4_":10,"5_5_5_":10,"6_6_6_":5,"7_7_7_":4,"A_A_A_":5,"B_B_B_":3};
+				var oddsKey = Object.keys(odds);
+				//中獎判斷
+				if(odds[winStr]){
+					result.push(odds[winStr]);
+					winTimes[winStr]++;
+				}else{
+					winTimes["lose"]++;
+					result.push(0);
+				}
+				
+				//中獎統計
+				for( i = 0 ; i < oddsKey.length ; i++){
+					document.getElementsByName("win" + oddsKey[i])[0].textContent = winTimes[oddsKey[i]];
+				}
+				document.getElementsByName("lose")[0].textContent = winTimes["lose"];
+				document.getElementsByName("result")[0].textContent = result.reduce((a,b)=>a+b);
+				break;
+			}
+		}
+		InitWebsocket();
+	  </script>
+	</body>
+</html>

@@ -20,14 +20,14 @@ func main() {
     // see the inline javascript code in the websockets.html, this endpoint is used to connect to the server.
     app.Get("/echo", ws.Handler())
 
-	app.StaticWeb("/", "./index.html")
+	app.StaticWeb("/", "./client/index.html")
 	
     // serve the javascript built'n client-side library,
     // see websockets.html script tags, this path is used.
-    app.Any("/iris-ws.js", func(ctx iris.Context) {
+    app.Get("/iris-ws.js", func(ctx iris.Context) {
         ctx.Write(websocket.ClientSource)
 	})
-    app.Get("/im.js", func(ctx iris.Context) {
+    app.Get("./client/im.js", func(ctx iris.Context) {
 		ctx.ServeFile("im.js", false)
 	})
 	
