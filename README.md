@@ -12,3 +12,6 @@
 <p>4.mysql連線套件go get github.com/go-sql-driver/mysql<p>
 <p>5.DB安裝 https://www.mysql.com/downloads/<p>
 
+# 說明
+./im  聊天室主程式
+./gm  slot主程式
