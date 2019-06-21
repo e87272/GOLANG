@@ -27,8 +27,8 @@ func main() {
     app.Get("/iris-ws.js", func(ctx iris.Context) {
         ctx.Write(websocket.ClientSource)
 	})
-    app.Get("./client/im.js", func(ctx iris.Context) {
-		ctx.ServeFile("im.js", false)
+    app.Get("/im.js", func(ctx iris.Context) {
+		ctx.ServeFile("./client/im.js", false)
 	})
 	
 	app.Run(iris.Addr(":8080"))
