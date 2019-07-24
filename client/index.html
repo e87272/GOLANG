@@ -171,6 +171,7 @@
 				case "101":
 				winStr = GMPacket.Msg;
 				var odds = {"1_1_1_":100,"2_2_2_":40,"3_3_3_":20,"4_4_4_":10,"5_5_5_":10,"6_6_6_":5,"7_7_7_":4,"A_A_A_":5,"B_B_B_":3};
+				
 				var oddsKey = Object.keys(odds);
 				//中獎判斷
 				if(odds[winStr]){
@@ -187,6 +188,21 @@
 				}
 				document.getElementsByName("lose")[0].textContent = winTimes["lose"];
 				document.getElementsByName("result")[0].textContent = result.reduce((a,b)=>a+b);
+				
+				winStr.replace
+				//結果顯示
+				for( i = 0 ; i < winStr.length ; i++){
+					document.getElementsByName("win" + oddsKey[i])[0].textContent = winTimes[oddsKey[i]];
+				}
+				
+				break;
+				case "102":
+					var symbol = {"1":"金7","2":"紅7","3":"藍7","4":"綠7","5":"3bar","6":"2bar","7":"1bar"};
+					winStr = GMPacket.Msg;
+					//結果顯示
+					for( i = 0 ; i < winStr.split("_").length - 1 ; i++){
+						document.getElementsByName("reelStrip" + i)[0].textContent = symbol[winStr.split("_")[i]];
+					}
 				break;
 			}
 		}

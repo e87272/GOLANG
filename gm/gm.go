@@ -80,6 +80,7 @@ func gameResult(c websocket.Connection,msg string){
 	}
 	
 	symbolWinStr := winStr;
+	packetSymbol := GMSocketPacket{Cmdid:"102",Msg:symbolWinStr};
 
 	//中獎判斷
 	if _, ok := odds[winStr]; ok{
@@ -109,6 +110,9 @@ func gameResult(c websocket.Connection,msg string){
 	//封包轉JSON
 	packettojson, _ := json.Marshal(packet)
 	//fmt.Printf("%s : %s\n", "packettojson", packettojson)
+	//封包轉JSON
+	packetSymboltojson, _ := json.Marshal(packetSymbol)
+	//fmt.Printf("%s : %s\n", "packettojson", packettojson)
 	
 	//資料庫連線
 	engine, _ := xorm.NewEngine("mysql", "gmlog:$test@/slot_777?charset=utf8")  // dbname是taoge
@@ -131,4 +135,5 @@ func gameResult(c websocket.Connection,msg string){
 	_ , _ = engine.Insert(result);
 	//發送至客端
 	c.Emit("gmsocket", string(packettojson));
+	c.Emit("gmsocket", string(packetSymboltojson));
 }
