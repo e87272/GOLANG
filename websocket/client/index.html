@@ -1,0 +1,41 @@
+
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<script type="text/javascript" src="websocket.js"></script>
+
+</head>
+<body>
+
+<!-- the messages will be shown here -->
+<div style="height:800px;width: 200px; position:relative;">
+    <pre id="output" style="position:absolute;bottom:0px;"></pre>
+</div>
+<!-- the message's input -->
+<input id="input" type="text" />
+
+<!-- when clicked then a websocket event will be sent to the server, at this example we registered the 'chat' -->
+<button id="sendBtn" disabled>Send</button>
+
+
+<div>
+    <!-- the message's input -->
+    輸入暱稱:<input id="nickname" type="text" />
+    輸入房名:<input id="roomname" type="text" />
+    <!-- when clicked then an iris websocket event will be sent to the server, at this example we registered the 'chat' -->
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()">Disconnect</button>
+    <button id="join" onclick="joinroom()" hidden>Join</button>
+    <button id="exit" onclick="exitroom()" hidden>Exit</button>
+</div>
+<select id ="roomlist">
+</select>
+
+<div>
+    <button id="roomsearch" onclick="roomsearch()">房間列表查詢</button>
+</div>
+<div>
+    <input id="input" type="text" />
+    <button id="usersearch"  onclick="usersearch()">房間玩家查詢</button>
+</div>
+</html>
