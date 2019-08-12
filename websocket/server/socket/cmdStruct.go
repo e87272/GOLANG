@@ -42,7 +42,7 @@ type Cmd_r_token_change_struct struct {
 }
 type Cmd_r_get_member_list_struct struct {
 	Base_R
-	Payload	Room        `json:"payload"`
+	Payload	[] User        `json:"payload"`
 }
 
 type Cmd_r_player_logout_struct struct {
@@ -63,7 +63,7 @@ type Cmd_r_player_enter_room_struct struct {
 
 type Cmd_r_get_room_list_struct struct {
 	Base_R
-	Payload	[]string        `json:"payload"`
+	Payload	[] RoomInfo        `json:"payload"`
 }
 
 /* Message(-伺服器): type 必定為奇數 廣播 */

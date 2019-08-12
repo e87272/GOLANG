@@ -22,14 +22,9 @@ type Exception struct {
 	Message	string    `json:"message"`
 }
 
-type Room struct {
-	Users          []User    `json:"users"`
-	ChatMessages   []ChatMessage    `json:"chatMessages"`
-}
-
 type User struct {
 	Id			string    `json:"id"`
-	Nickname	string    `json:"nickname"`
+	Nickname	string    `json:"nickName"`
 	Icon		string    `json:"icon"`
 	Role		string    `json:"role"`
 	Status		string    `json:"status"`
@@ -38,7 +33,7 @@ type User struct {
 type Chat struct {
 	Text	    string    `json:"text"`
 	Style	    string    `json:"style"`
-	Roominfo	RoomInfo    `json:"roominfo"`
+	Roominfo	RoomInfo    `json:"roomInfo"`
 }
 
 type ChatMessage struct {
@@ -46,14 +41,19 @@ type ChatMessage struct {
 	Stamp	string    `json:"stamp"`
 	Text	string    `json:"text"`
 	Style	string    `json:"style"`
-	Roominfo	RoomInfo    `json:"roominfo"`
+	Roominfo	RoomInfo    `json:"roomInfo"`
+}
+
+type Room struct {
+	Users          []User    `json:"users"`
+	ChatMessages   []ChatMessage    `json:"chatMessages"`
 }
 
 type LoginInfo struct{
-	Roomname string   `json:"roomname"`
-	Nickname string   `json:"nickname"`
+	Roomname string   `json:"roomName"`
+	Nickname string   `json:"nickName"`
 }
 
 type RoomInfo struct{
-	Roomname string   `json:"roomname"`
+	Roomname string   `json:"roomName"`
 }

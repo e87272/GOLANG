@@ -20,22 +20,22 @@
 
 <div>
     <!-- the message's input -->
-    輸入暱稱:<input id="nickname" type="text" />
-    輸入房名:<input id="roomname" type="text" />
+    輸入暱稱:<input id="nickName" type="text" />
+    輸入房名:<input id="roomName" type="text" />
     <!-- when clicked then an iris websocket event will be sent to the server, at this example we registered the 'chat' -->
     <button onclick="connect()">Connect</button>
     <button onclick="disconnect()">Disconnect</button>
     <button id="join" onclick="joinroom()" hidden>Join</button>
     <button id="exit" onclick="exitroom()" hidden>Exit</button>
 </div>
-<select id ="roomlist">
+<select id ="roomList">
 </select>
 
 <div>
-    <button id="roomsearch" onclick="roomsearch()">房間列表查詢</button>
+    <button id="roomSearch" onclick="roomSearch()">房間列表查詢</button>
 </div>
 <div>
-    <input id="input" type="text" />
-    <button id="usersearch"  onclick="usersearch()">房間玩家查詢</button>
+    <input id="roomInput" type="text" />
+    <button id="userSearch"  onclick="userSearch()">房間玩家查詢</button>
 </div>
 </html>

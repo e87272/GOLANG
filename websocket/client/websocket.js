@@ -29,7 +29,7 @@ function connect(){
 }
 
 function disconnect(){
-  var playerLogout = { "cmd" : "4", "idem" : Date.now().toString() ,"payload": { roomname : document.getElementById("roomname").value}}
+  var playerLogout = { "cmd" : "4", "idem" : Date.now().toString() ,"payload": { roomName : document.getElementById("roomName").value}}
   
   if (ws) {
     ws.send(JSON.stringify(playerLogout));
@@ -37,7 +37,7 @@ function disconnect(){
 }
   
 function joinroom(){
-	var playerEnterroom = { "cmd" : "10", "idem" : Date.now().toString() ,"payload": { roomname : document.getElementById("roomname").value}}
+	var playerEnterroom = { "cmd" : "10", "idem" : Date.now().toString() ,"payload": { roomName : document.getElementById("roomName").value}}
 	  
 	if (ws) {
 	  ws.send(JSON.stringify(playerEnterroom));
@@ -45,26 +45,26 @@ function joinroom(){
 }
 
 function exitroom(){
-	var playerExitroom = { "cmd" : "8", "idem" : Date.now().toString() ,"payload": { roomname : document.getElementById("roomname").value}}
+	var playerExitroom = { "cmd" : "8", "idem" : Date.now().toString() ,"payload": { roomName : document.getElementById("roomName").value}}
 	  
 	if (ws) {
 	  ws.send(JSON.stringify(playerExitroom));
 	}
 }
 
-function roomsearch(){
-	var roomsearch = { "cmd" : "16", "idem" : Date.now().toString() }
+function roomSearch(){
+	var roomSearch = { "cmd" : "16", "idem" : Date.now().toString() }
 	  
 	if (ws) {
-	  ws.send(JSON.stringify(roomsearch));
+	  ws.send(JSON.stringify(roomSearch));
 	}
 }
 
-function usersearch(){
-	var roomsearch = { "cmd" : "6", "idem" : Date.now().toString() ,"payload": { roomname : document.getElementById("roomlist").value}}
+function userSearch(){
+	var userSearch = { "cmd" : "6", "idem" : Date.now().toString() ,"payload": { roomName : document.getElementById("roomInput").value}}
 	  
 	if (ws) {
-	  ws.send(JSON.stringify(roomsearch));
+	  ws.send(JSON.stringify(userSearch));
 	}
 }
 
@@ -78,7 +78,7 @@ function handleError(reason) {
 }
 
 function handleNamespaceConnectedConn() {
-  var loginInfo = {"roomname" : document.getElementById("roomname").value,"nickname" : document.getElementById("nickname").value};
+  var loginInfo = {"roomName" : document.getElementById("roomName").value,"nickName" : document.getElementById("nickName").value};
 	var changeToken = { "cmd" : "2", "idem" : Date.now().toString(), "payload": loginInfo };
 	ws.send(JSON.stringify(changeToken));
 
@@ -90,7 +90,7 @@ function handleNamespaceConnectedConn() {
 		var idem = Date.now().toString();
 		inputTxtQueue[idem] = inputTxt.value;
 		inputTxt.value = "";
-		var sendMessage = { "cmd" : "80", "idem" : idem, "payload": {"text":inputTxtQueue[idem],"style":"1","roominfo":{"roomname" : document.getElementById("roomlist").value,"nickname" : document.getElementById("nickname").value}} }
+		var sendMessage = { "cmd" : "80", "idem" : idem, "payload": {"text":inputTxtQueue[idem],"style":"1","roomInfo":{"roomName" : document.getElementById("roomList").value,"nickName" : document.getElementById("nickName").value}} }
 		ws.send(JSON.stringify(sendMessage));
 	};
 }
@@ -100,22 +100,31 @@ function receivePacketHandle(msg) {
 	switch(packet.cmd){
 		case "3":
 			//addMessage("我加入聊天室");
-　			document.getElementById('nickname').disabled=true;　// 變更欄位為禁用
+　			document.getElementById('nickName').disabled=true;　// 變更欄位為禁用
 　			document.getElementById('join').hidden=false;
 　			document.getElementById('exit').hidden=false;
 		break;
 		case "5":
 			addMessage("我段開連線");
       		ws.close();
-	  　	document.getElementById('nickname').disabled=false;　// 變更欄位為禁用
+	  　	document.getElementById('nickName').disabled=false;　// 變更欄位為禁用
 　			document.getElementById('join').hidden=true;
 　			document.getElementById('exit').hidden=true;
+			document.getElementById("roomList").options.length = 0;
 		break;
 		case "7":
-			addMessage("聊天室成員:" + packet["payload"]);
+			var nameList = "";
+			for (i= 0; i< packet["payload"].length; i++){
+				nameList = nameList + packet["payload"][i].nickName + ","
+			}
+			addMessage("聊天室成員:" + nameList.substr(0 , nameList.length - 1));
 		break;
 		case "17":
-			addMessage("聊天室列表:" + packet["payload"]);
+			var roomList = "";
+			for (i= 0; i< packet["payload"].length; i++){
+				roomList = roomList + packet["payload"][i].roomName + ","
+			}
+			addMessage("聊天室列表:" + roomList.substr(0 , roomList.length - 1));
 		break;
 		case "9":
 			console.log("CMD_R_PLAYER_EXIT_ROOM");
@@ -132,26 +141,26 @@ function receivePacketHandle(msg) {
 			}
 		break;
 		case "13":
-			addMessage(packet["payload"]["from"]["nickname"] + "加入" + packet["payload"]["roominfo"]["roomname"] +"聊天室");
-			if(packet["payload"]["from"]["nickname"] == document.getElementById("nickname").value){
+			addMessage(packet["payload"]["from"]["nickName"] + "加入" + packet["payload"]["roomInfo"]["roomName"] +"聊天室");
+			if(packet["payload"]["from"]["nickName"] == document.getElementById("nickName").value){
 				var option = document.createElement("option");
-				option.text = packet["payload"]["roominfo"]["roomname"];
-				option.value = packet["payload"]["roominfo"]["roomname"];
+				option.text = packet["payload"]["roomInfo"]["roomName"];
+				option.value = packet["payload"]["roomInfo"]["roomName"];
 				option.selected = true;
-				option.id = "room-"+packet["payload"]["roominfo"]["roomname"];
-				var select = document.getElementById("roomlist");
+				option.id = "room-"+packet["payload"]["roomInfo"]["roomName"];
+				var select = document.getElementById("roomList");
 				select.appendChild(option);
 			}
 		break;
 		case "15":
-			addMessage(packet["payload"]["from"]["nickname"] + "離開" + packet["payload"]["roominfo"]["roomname"] +"聊天室");
-			if(packet["payload"]["from"]["nickname"] == document.getElementById("nickname").value){
-				var option = document.getElementById("room-"+packet["payload"]["roominfo"]["roomname"]);
-				if (option) document.getElementById("roomlist").removeChild(option);
+			addMessage(packet["payload"]["from"]["nickName"] + "離開" + packet["payload"]["roomInfo"]["roomName"] +"聊天室");
+			if(packet["payload"]["from"]["nickName"] == document.getElementById("nickName").value){
+				var option = document.getElementById("room-"+packet["payload"]["roomInfo"]["roomName"]);
+				if (option) document.getElementById("roomList").removeChild(option);
 			}
 		break;
 		case "51":
-			addMessage(packet["payload"]["from"]["nickname"] + " 在 " + packet["payload"]["roominfo"]["roomname"] +" 聊天室說" + ": " + packet["payload"]["text"]);
+			addMessage(packet["payload"]["from"]["nickName"] + " 在 " + packet["payload"]["roomInfo"]["roomName"] +" 聊天室說" + ": " + packet["payload"]["text"]);
 		break;
 		default:
 

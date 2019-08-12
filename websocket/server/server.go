@@ -14,16 +14,17 @@ import (
 )
 
 type Client struct {
-	room map[string]string
+	room map[string]socket.RoomInfo
 
 	// The websocket connection.
 	conn *websocket.Conn
 
-	nickname string
+	user socket.User
 }
 
-var addr = flag.String("addr", ":8080", "http service address")
+var addr = flag.String("addr", ":8800", "http service address")
 var rooms = make(map[string]map[*websocket.Conn]Client)
+var roomsInfo = make(map[string]socket.RoomInfo)
 var clients = make(map[*websocket.Conn]Client)
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +54,18 @@ func main() {
 		}
 
 		defer func() {
-			// log.Println("disconnect !!")
+			log.Println("disconnect !!")
+			
+			for _ , roominfo := range clients[connect].room {
+				delete(rooms[roominfo.Roomname] , connect)
+				if(len(rooms[roominfo.Roomname]) == 0){
+					delete(rooms,roominfo.Roomname)
+					delete(roomsInfo,roominfo.Roomname)
+				}
+			}
+
+			delete(clients , connect)
+
 			connect.Close()
 		}()
 
@@ -76,8 +88,8 @@ func main() {
 		log.Fatal("ListenAndServe: ", err)
 	}
 	
-	log.Println("server start at :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Println("server start at :8800")
+	log.Fatal(http.ListenAndServe(":8800", nil))
 
 }
 
@@ -111,9 +123,10 @@ func receivePacketHandle(connect *websocket.Conn) error{
 				panic(err)
 			}
 
-			roomMap := make(map[string]string)
-			roomMap[packetToken.Payload.Roomname] = packetToken.Payload.Roomname
-			client := Client{room: roomMap , conn: connect , nickname : packetToken.Payload.Nickname}
+			roomMap := make(map[string]socket.RoomInfo)
+			roomMap[packetToken.Payload.Roomname] = socket.RoomInfo { Roomname : packetToken.Payload.Roomname }
+			userinfo := socket.User {Id : packetToken.Payload.Nickname , Nickname : packetToken.Payload.Nickname , Icon : "" , Role : "" , Status : ""}
+			client := Client{room: roomMap , conn: connect , user : userinfo}
 			// log.Printf("client : %+v\n", client)
 			clients[connect] = client
 			//log.Printf("clients : %+v\n", clients)
@@ -121,6 +134,7 @@ func receivePacketHandle(connect *websocket.Conn) error{
 				var adduser = make(map[*websocket.Conn]Client)
 				adduser[connect] = client
 				rooms[packetToken.Payload.Roomname] = adduser
+				roomsInfo[packetToken.Payload.Roomname] = socket.RoomInfo { Roomname : packetToken.Payload.Roomname }
 			}else{
 				rooms[packetToken.Payload.Roomname][connect] = client
 			}
@@ -131,9 +145,8 @@ func receivePacketHandle(connect *websocket.Conn) error{
 			
 			connect.WriteMessage(mtype ,  tokenChangeJson)
 			
-			user := socket.User {Id : clients[connect].nickname , Nickname : clients[connect].nickname , Icon : "" , Role : "" , Status : ""}
 			roominfo := socket.RoomInfo { Roomname : packetToken.Payload.Roomname }
-			chatMessage := socket.ChatMessage {From : user  , Stamp : timeUnix , Text : "enter room" , Style : "1" , Roominfo : roominfo}
+			chatMessage := socket.ChatMessage {From : clients[connect].user  , Stamp : timeUnix , Text : "enter room" , Style : "1" , Roominfo : roominfo}
 			logoutBrocast := socket.Cmd_b_player_enter_room_struct { Base_B : socket.Base_B {Cmd : socket.CMD_B_PLAYER_ENTER_ROOM , Stamp : timeUnix} , Payload : chatMessage}
 			logoutBrocastJson, err := json.Marshal(logoutBrocast)
 			if err != nil {
@@ -162,16 +175,23 @@ func receivePacketHandle(connect *websocket.Conn) error{
 			
 			connect.WriteMessage(mtype , logoutJson)
 
-			var nickname = clients[connect].nickname
+			userinfo := clients[connect].user
+			
+
+			for _ , roominfo := range clients[connect].room {
+				delete(rooms[roominfo.Roomname] , connect)
+				if(len(rooms[roominfo.Roomname]) == 0){
+					delete(rooms,roominfo.Roomname)
+					delete(roomsInfo,roominfo.Roomname)
+				}
+			}
 
 			delete(clients , connect)
-			delete(rooms[packetLogout.Payload.Roomname] , connect)
 
 			connect.Close()
 
-			user := socket.User {Id : nickname , Nickname : nickname , Icon : "" , Role : "" , Status : ""}
 			roominfo := socket.RoomInfo { Roomname : packetLogout.Payload.Roomname }
-			chatMessage := socket.ChatMessage {From : user , Stamp : timeUnix , Text : "exit room" , Style : "1" , Roominfo : roominfo}
+			chatMessage := socket.ChatMessage {From : userinfo , Stamp : timeUnix , Text : "exit room" , Style : "1" , Roominfo : roominfo}
 			logoutBrocast := socket.Cmd_b_player_exit_room_struct { Base_B : socket.Base_B {Cmd : socket.CMD_B_PLAYER_EXIT_ROOM , Stamp : timeUnix} , Payload : chatMessage}
 			logoutBrocastJson, _ := json.Marshal(logoutBrocast)
 
@@ -187,29 +207,40 @@ func receivePacketHandle(connect *websocket.Conn) error{
 			}
 
 			if checkinroom(packetExitRoom.Payload.Roomname , clients[connect] ){
+				
+				roominfo := socket.RoomInfo { Roomname : packetExitRoom.Payload.Roomname }
+				chatMessage := socket.ChatMessage {From : clients[connect].user , Stamp : timeUnix , Text : "exit room" , Style : "1" , Roominfo : roominfo}
+				exitroomBrocast := socket.Cmd_b_player_exit_room_struct { Base_B : socket.Base_B {Cmd : socket.CMD_B_PLAYER_EXIT_ROOM , Stamp : timeUnix} , Payload : chatMessage}
+				exitroomBrocastJson, err := json.Marshal(exitroomBrocast)
+				if err != nil {
+					log.Println("json err:", err)
+				}
+	
+				broadcast(packetExitRoom.Payload.Roomname, mtype , exitroomBrocastJson)
+
 				delete(clients[connect].room,packetExitRoom.Payload.Roomname)
-				rooms[packetExitRoom.Payload.Roomname][connect] = clients[connect]
+				delete(rooms[packetExitRoom.Payload.Roomname], connect)
 				exitroom := socket.Cmd_r_player_exit_room_struct { Base_R : socket.Base_R {Cmd : socket.CMD_R_PLAYER_EXIT_ROOM , Idem : packetExitRoom.Idem , Stamp : timeUnix, Result : "ok", Exp :  socket.Exception{Code : "", Message : ""}}}
 				exitroomJson, _ := json.Marshal(exitroom)
 				connect.WriteMessage(mtype , exitroomJson)
+
+				if(len(rooms[packetExitRoom.Payload.Roomname]) == 0){
+					delete(rooms,packetExitRoom.Payload.Roomname)
+					delete(roomsInfo,packetExitRoom.Payload.Roomname)
+				}
+				
+				log.Printf("roomsInfo : %+v\n", roomsInfo)
+				
+				log.Printf("rooms : %+v\n", rooms)
+				
+				log.Printf("clients : %+v\n", clients)
+
 			}else{
 				exitroom := socket.Cmd_r_player_exit_room_struct { Base_R : socket.Base_R {Cmd : socket.CMD_R_PLAYER_EXIT_ROOM , Idem : packetExitRoom.Idem , Stamp : timeUnix, Result : "err", Exp :  socket.Exception{Code : "101", Message : "NOT_IN_ROOM"}}}
 				exitroomJson, _ := json.Marshal(exitroom)
 				connect.WriteMessage(mtype , exitroomJson)
 				break;
 			}
-
-
-			user := socket.User {Id : clients[connect].nickname , Nickname : clients[connect].nickname , Icon : "" , Role : "" , Status : ""}
-			roominfo := socket.RoomInfo { Roomname : packetExitRoom.Payload.Roomname }
-			chatMessage := socket.ChatMessage {From : user , Stamp : timeUnix , Text : "exit room" , Style : "1" , Roominfo : roominfo}
-			exitroomBrocast := socket.Cmd_b_player_exit_room_struct { Base_B : socket.Base_B {Cmd : socket.CMD_B_PLAYER_EXIT_ROOM , Stamp : timeUnix} , Payload : chatMessage}
-			exitroomBrocastJson, err := json.Marshal(exitroomBrocast)
-			if err != nil {
-				log.Println("json err:", err)
-			}
-
-			broadcast(packetExitRoom.Payload.Roomname, mtype , exitroomBrocastJson)
 
 			break;
 		case socket.CMD_C_PLAYER_ENTER_ROOM:
@@ -227,11 +258,12 @@ func receivePacketHandle(connect *websocket.Conn) error{
 				break;
 			}
 			client := clients[connect]
-			client.room[packetEnterRoom.Payload.Roomname] = packetEnterRoom.Payload.Roomname
+			client.room[packetEnterRoom.Payload.Roomname] = socket.RoomInfo { Roomname : packetEnterRoom.Payload.Roomname }
 			if(rooms[packetEnterRoom.Payload.Roomname] == nil){
 				var adduser = make(map[*websocket.Conn]Client)
 				adduser[connect] = client
 				rooms[packetEnterRoom.Payload.Roomname] = adduser
+				roomsInfo[packetEnterRoom.Payload.Roomname] = socket.RoomInfo { Roomname : packetEnterRoom.Payload.Roomname }
 			}else{
 				rooms[packetEnterRoom.Payload.Roomname][connect] = client
 			}
@@ -241,9 +273,8 @@ func receivePacketHandle(connect *websocket.Conn) error{
 			enterroomJson, _ := json.Marshal(enterroom)
 			connect.WriteMessage(mtype , enterroomJson)
 
-			user := socket.User {Id : clients[connect].nickname , Nickname : clients[connect].nickname , Icon : "" , Role : "" , Status : ""}
 			roominfo := socket.RoomInfo { Roomname : packetEnterRoom.Payload.Roomname }
-			chatMessage := socket.ChatMessage {From : user , Stamp : timeUnix , Text : "enter room" , Style : "1" , Roominfo : roominfo}
+			chatMessage := socket.ChatMessage {From : clients[connect].user , Stamp : timeUnix , Text : "enter room" , Style : "1" , Roominfo : roominfo}
 			enterroomBrocast := socket.Cmd_b_player_enter_room_struct { Base_B : socket.Base_B {Cmd : socket.CMD_B_PLAYER_ENTER_ROOM , Stamp : timeUnix} , Payload : chatMessage}
 			enterroomBrocastJson, _ := json.Marshal(enterroomBrocast)
 
@@ -270,9 +301,8 @@ func receivePacketHandle(connect *websocket.Conn) error{
 
 			connect.WriteMessage(mtype , SendMsgJson)
 
-			user := socket.User {Id : clients[connect].nickname , Nickname : clients[connect].nickname , Icon : "" , Role : "" , Status : ""}
 			roominfo := socket.RoomInfo { Roomname : packetSendMsg.Payload.Roominfo.Roomname }
-			chatMessage := socket.ChatMessage {From : user , Stamp : timeUnix , Text : packetSendMsg.Payload.Text , Style : packetSendMsg.Payload.Style , Roominfo : roominfo}
+			chatMessage := socket.ChatMessage {From : clients[connect].user , Stamp : timeUnix , Text : packetSendMsg.Payload.Text , Style : packetSendMsg.Payload.Style , Roominfo : roominfo}
 			sendMsgBrocast := socket.Cmd_b_player_speak_struct { Base_B : socket.Base_B {Cmd : socket.CMD_B_PLAYER_SPEAK , Stamp : timeUnix} , Payload : chatMessage}
 			sendMsgBrocastJson, _ := json.Marshal(sendMsgBrocast)
 			
@@ -286,12 +316,12 @@ func receivePacketHandle(connect *websocket.Conn) error{
 				panic(err)
 			}
 			
-			memberList := make([]string, 0, len(rooms[packetRoomList.Payload.Roomname]))
+			memberList := make([]socket.User, 0, len(rooms[packetRoomList.Payload.Roomname]))
 			for _ , v := range rooms[packetRoomList.Payload.Roomname] {
-				memberList = append(memberList, v.nickname)
+				memberList = append(memberList, v.user)
 			}
 			
-			SendMemberList := socket.Cmd_r_get_room_list_struct { Base_R : socket.Base_R {Cmd : socket.CMD_R_GET_MEMBER_LIST , Idem : packetRoomList.Idem , Stamp : timeUnix, Result : "ok", Exp :  socket.Exception{Code : "", Message : ""}} , Payload : memberList}
+			SendMemberList := socket.Cmd_r_get_member_list_struct { Base_R : socket.Base_R {Cmd : socket.CMD_R_GET_MEMBER_LIST , Idem : packetRoomList.Idem , Stamp : timeUnix, Result : "ok", Exp :  socket.Exception{Code : "", Message : ""}} , Payload : memberList}
 			SendMemberListJson, _ := json.Marshal(SendMemberList)
 
 			connect.WriteMessage(mtype , SendMemberListJson)
@@ -304,9 +334,9 @@ func receivePacketHandle(connect *websocket.Conn) error{
 				panic(err)
 			}
 			
-			roomList := make([]string, 0, len(rooms))
-			for k := range rooms {
-				roomList = append(roomList, k)
+			roomList := make([]socket.RoomInfo, 0, len(roomsInfo))
+			for _ , roominfo := range roomsInfo {
+				roomList = append(roomList, roominfo)
 			}
 			// log.Printf("roomList : %+v\n", roomList)
 			
@@ -339,7 +369,7 @@ func broadcast(roomName string , mtype int , msg []byte) {
 
 func checkinroom(roomName string , client Client) bool{
 	for _, clientRoom := range client.room {
-        if roomName == clientRoom {
+        if roomName == clientRoom.Roomname {
             return true
         }
     }
