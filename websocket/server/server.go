@@ -22,13 +22,66 @@ type Client struct {
 	user socket.User
 }
 
-var addr = flag.String("addr", ":8800", "http service address")
+var addr = flag.String("addr", ":8080", "http service address")
 var rooms = make(map[string]map[*websocket.Conn]Client)
 var roomsInfo = make(map[string]socket.RoomInfo)
 var clients = make(map[*websocket.Conn]Client)
 
+func main() {
+
+    mux := http.NewServeMux()
+    mux.HandleFunc("/", serveHome)
+	mux.HandleFunc("/js/", fileHandler)
+	mux.HandleFunc("/css/", fileHandler)
+	mux.HandleFunc("/echo",echoHandler)
+
+	http.ListenAndServe(":8080", mux)
+
+}
+
+func echoHandler(w http.ResponseWriter, r *http.Request) {
+	upgrader := &websocket.Upgrader{
+		//如果有 cross domain 的需求，可加入這個，不檢查 cross domain
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+	connect, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("upgrade:", err)
+		return
+	}
+
+	defer func() {
+		log.Println("disconnect !!")
+		
+		for _ , roominfo := range clients[connect].room {
+			delete(rooms[roominfo.Roomname] , connect)
+			if(len(rooms[roominfo.Roomname]) == 0){
+				delete(rooms,roominfo.Roomname)
+				delete(roomsInfo,roominfo.Roomname)
+			}
+		}
+
+		delete(clients , connect)
+
+		connect.Close()
+	}()
+
+	for {
+		err = receivePacketHandle(connect)
+		if err != nil {
+			log.Println("write:", err)
+			break
+		}
+	}
+}
+
+func fileHandler(w http.ResponseWriter, r *http.Request) {
+	//log.Println("r.URL.Path :" , r.URL.Path)
+	http.ServeFile(w, r, "../client"+r.URL.Path)
+}
+
 func serveHome(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.URL)
+	//log.Println(r.URL)
 	if r.URL.Path != "/" {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -38,59 +91,6 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.ServeFile(w, r, "../client/index.html")
-}
-
-func main() {
-	upgrader := &websocket.Upgrader{
-		//如果有 cross domain 的需求，可加入這個，不檢查 cross domain
-		CheckOrigin: func(r *http.Request) bool { return true },
-	}
-	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
-
-		connect, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			log.Println("upgrade:", err)
-			return
-		}
-
-		defer func() {
-			log.Println("disconnect !!")
-			
-			for _ , roominfo := range clients[connect].room {
-				delete(rooms[roominfo.Roomname] , connect)
-				if(len(rooms[roominfo.Roomname]) == 0){
-					delete(rooms,roominfo.Roomname)
-					delete(roomsInfo,roominfo.Roomname)
-				}
-			}
-
-			delete(clients , connect)
-
-			connect.Close()
-		}()
-
-		for {
-			err = receivePacketHandle(connect)
-			if err != nil {
-				log.Println("write:", err)
-				break
-			}
-		}
-	})
-
-	http.HandleFunc("/", serveHome)
-	http.HandleFunc("/websocket.js", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "../client/websocket.js")
-	})
-	
-	err := http.ListenAndServe(*addr, nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
-	}
-	
-	log.Println("server start at :8800")
-	log.Fatal(http.ListenAndServe(":8800", nil))
-
 }
 
 
