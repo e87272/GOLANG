@@ -1,0 +1,201 @@
+package common
+
+import (
+	"encoding/json"
+	"time"
+
+	"../socket"
+)
+
+var sideTextLastMessagePrefix string = "sidetext_lastMessage_"
+var sideTextLastSeenPrefix string = "sidetext_lastSeen_"
+
+var roomLastMessagePrefix string = "room_lastMessage_"
+var roomLastSeenPrefix string = "room_lastSeen_"
+
+var firstenterroomPrefix string = "enter_room_first_"
+
+var roomInfoPrefix string = "roominfo_"
+
+var userInfoPrefix string = "userinfo_"
+
+var memberCountPrefix string = "member_count_"
+
+func Getredissidetextlastmessage(key string) socket.Chatmessage {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	result, err := Redisclient.Get(sideTextLastMessagePrefix + key).Result()
+	//log.Printf("Getredissidetextlastmessage key : %+v\n", key)
+	//log.Printf("Getredissidetextlastmessage result : %+v\n", result)
+	if err != nil {
+		Essyserrorlog("COMMON_GETREDISSIDETEXTLASTMESSAGE_ERROR", "sideTextUuid:"+sideTextLastMessagePrefix+key, err)
+		return socket.Chatmessage{}
+	}
+	var chatMessage socket.Chatmessage
+	json.Unmarshal([]byte(result), &chatMessage)
+	//log.Printf("Getredissidetextlastmessage chatMessage : %+v\n", chatMessage)
+	return chatMessage
+}
+
+func Setredissidetextlastmessage(key string, chatMessage socket.Chatmessage) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	//log.Printf("Setredissidetextlastmessage chatMessage : %+v\n", chatMessage)
+	chatMessageJson, _ := json.Marshal(chatMessage)
+	//設0存永久
+	//log.Printf("Setredissidetextlastmessage string(chatMessageJson) : %+v\n", string(chatMessageJson))
+	//log.Printf("Setredissidetextlastmessage key : %+v\n", sideTextLastMessagePrefix+key)
+	Redisclient.Set(sideTextLastMessagePrefix+key, string(chatMessageJson), 30*24*time.Hour)
+}
+
+func Getredissidetextlastseen(key string) string {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	result, err := Redisclient.Get(sideTextLastSeenPrefix + key).Result()
+	//log.Printf("Getredissidetextlastseen key : %+v\n", key)
+	//log.Printf("Getredissidetextlastseen result : %+v\n", result)
+	if err != nil {
+		// Essyserrorlog("COMMON_GETREDISSIDETEXTLASTSEEN_ERROR", "sideTextUuid:"+sideTextLastSeenPrefix+key, err)
+		return ""
+	}
+	return result
+}
+
+func Setredissidetextlastseen(key string, hsitoryUuid string) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	//log.Printf("Setredissidetextlastseen key : %+v\n", sideTextLastSeenPrefix+key)
+	//log.Printf("Setredissidetextlastseen hsitoryUuid : %+v\n", sideTextLastSeenPrefix+key)
+	Redisclient.Set(sideTextLastSeenPrefix+key, hsitoryUuid, 30*24*time.Hour)
+}
+
+func Getredisroomlastmessage(key string) socket.Chatmessage {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	result, err := Redisclient.Get(roomLastMessagePrefix + key).Result()
+	//log.Printf("Getredisroomlastmessage key : %+v\n", key)
+	//log.Printf("Getredisroomlastmessage result : %+v\n", result)
+	if err != nil {
+		Essyserrorlog("COMMON_GETREDISROOMLASTMESSAGE_ERROR", "roomUuid:"+roomLastMessagePrefix+key, err)
+		return socket.Chatmessage{}
+	}
+	var chatMessage socket.Chatmessage
+	json.Unmarshal([]byte(result), &chatMessage)
+	//log.Printf("Getredisroomlastmessage chatMessage : %+v\n", chatMessage)
+	return chatMessage
+}
+
+func Setredisroomlastmessage(key string, chatMessage socket.Chatmessage) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	//log.Printf("Setredisroomlastmessage chatMessage : %+v\n", chatMessage)
+	chatMessageJson, _ := json.Marshal(chatMessage)
+	//設0存永久
+	//log.Printf("Setredisroomlastmessage string(chatMessageJson) : %+v\n", string(chatMessageJson))
+	//log.Printf("Setredisroomlastmessage key : %+v\n", roomLastMessagePrefix+key)
+	Redisclient.Set(roomLastMessagePrefix+key, string(chatMessageJson), 30*24*time.Hour)
+}
+
+func Getredisroomlastseen(key string) string {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	result, err := Redisclient.Get(roomLastSeenPrefix + key).Result()
+	//log.Printf("Getredisroomlastseen key : %+v\n", key)
+	//log.Printf("Getredisroomlastseen result : %+v\n", result)
+	if err != nil {
+		Essyserrorlog("COMMON_GETREDISROOMLASTSEEN_ERROR", "roomLastSeenKey:"+roomLastSeenPrefix+key, err)
+		return ""
+	}
+	return result
+}
+
+func Setredisroomlastseen(key string, hsitoryUuid string) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	//log.Printf("Setredisroomlastseen key : %+v\n", roomLastSeenPrefix+key)
+	//log.Printf("Setredisroomlastseen hsitoryUuid : %+v\n", roomLastSeenPrefix+key)
+	Redisclient.Set(roomLastSeenPrefix+key, hsitoryUuid, 30*24*time.Hour)
+}
+
+func Getredisfirstenterroom(key string) string {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	result, err := Redisclient.Get(firstenterroomPrefix + key).Result()
+	//log.Printf("Getredisroomlastseen key : %+v\n", key)
+	//log.Printf("Getredisroomlastseen result : %+v\n", result)
+	if err != nil {
+		// Essyserrorlog("COMMON_GETREDISFIRSTENTERROOM_ERROR", "firstenterroomPrefixKey:"+firstenterroomPrefix+key, err)
+		return ""
+	}
+	return result
+}
+
+func Setredisfirstenterroom(key string, fromUuid string) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	//log.Printf("Setredisroomlastseen key : %+v\n", roomLastSeenPrefix+key)
+	//log.Printf("Setredisroomlastseen hsitoryUuid : %+v\n", roomLastSeenPrefix+key)
+	Redisclient.Set(firstenterroomPrefix+key, fromUuid, 30*24*time.Hour)
+}
+
+func Deleteredisfirstenterroom(key string) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	Redisclient.Del(firstenterroomPrefix + key)
+}
+
+func Getredisroominfo(key string) (socket.Roominfo, bool) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	result, err := Redisclient.Get(roomInfoPrefix + key).Result()
+	if err != nil {
+		return socket.Roominfo{}, false
+	}
+	var roomInfo socket.Roominfo
+	json.Unmarshal([]byte(result), &roomInfo)
+	return roomInfo, true
+}
+
+func Setredisroominfo(key string, roomInfo socket.Roominfo) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	roomInfoJson, _ := json.Marshal(roomInfo)
+	Redisclient.Set(roomInfoPrefix+key, roomInfoJson, 7*24*time.Hour)
+}
+
+func Getredisuserinfo(key string) (socket.User, bool) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	result, err := Redisclient.Get(userInfoPrefix + key).Result()
+	if err != nil {
+		return socket.User{}, false
+	}
+	var userInfo socket.User
+	json.Unmarshal([]byte(result), &userInfo)
+	return userInfo, true
+}
+
+func Setredisuserinfo(key string, userInfo socket.User) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	userInfoJson, _ := json.Marshal(userInfo)
+	Redisclient.Set(userInfoPrefix+key, userInfoJson, 7*24*time.Hour)
+}
+
+func Getredismembercount(key string) (int, bool) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	result, err := Redisclient.Get(memberCountPrefix + key).Result()
+	if err != nil {
+		return 0, false
+	}
+	var count int
+	json.Unmarshal([]byte(result), &count)
+	return count, true
+}
+
+func Setredismembercount(key string, count int) {
+	Mutexredis.Lock()
+	defer Mutexredis.Unlock()
+	Redisclient.Set(memberCountPrefix+key, count, 7*24*time.Hour)
+}

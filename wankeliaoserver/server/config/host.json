@@ -1,0 +1,23 @@
+{
+	"imServerPort"   :  "#{imServerPort}",
+	"elasticSearchHost" :  "#{elasticSearchHost}",
+	"redisHost" :  "#{redisHost}",
+	"dbHost"   :  "#{dbHost}",
+	"dbAccount"   :  "#{dbAccount}",
+	"dbPassword"   :  "#{dbPassword}",
+	"sysLog" :  "syslog",
+	"sysErrorLog" :  "syserrorlog",
+	"sysRoomLog" :  "sysroomlog",
+	"sideText" :  "sidetext",
+	"liveGroup" :  "livegroup",
+	"vipGroup" :  "vipgroup",
+	"privateGroup" :  "privategroup",
+	"releaseId" : "#{Octopus.Release.Id}",
+	"environmentId" : "#{environmentId}",
+	"uploadPath" : "#{uploadPath}",
+	"linkPath" : "#{linkPath}",
+	"userCheckUrlMM" : "#{userCheckUrlMM}",
+	"roleUuidAdmin" : "#{roleUuidAdmin}",
+	"roleUuidStreamer" : "#{roleUuidStreamer}",
+	"roleUuidPrivateAndVipAdmin" : "#{roleUuidPrivateAndVipAdmin}"
+}

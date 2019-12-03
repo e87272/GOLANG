@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html spellcheck="false">
+
+<head>
+	<meta charset="utf-8">
+	<title>測試錯誤訊息</title>
+	<link rel="stylesheet" href="https://necolas.github.io/normalize.css/latest/normalize.css">
+	<link rel="stylesheet" href="errorTest.css">
+</head>
+
+<body>
+	<div class="body frameset row">
+		<div class="frame" id="MenuFrame" style="width: 480px;">
+			<div class="body" id="MenuBody">
+				<div id="Menu"></div>
+			</div>
+		</div>
+		<hr>
+		<div class="frameset col">
+			<div class="frame" id="InputFrame" style="height: 560px;">
+				<div class="body" id="InputBody">
+					<div>要發送的封包列表：</div>
+					<textarea id="SocketInput"></textarea>
+					<button id="SendBtn">Send</button>
+				</div>
+			</div>
+			<hr>
+			<div class="frame" id="OutputFrame">
+				<div class="body" id="OutputBody">
+					<div>接收到的封包：</div>
+					<div id="OutputBox">
+						<div id="SocketOutput"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script src="errorTest.js"></script>
+</body>
+
+</html>
