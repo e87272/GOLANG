@@ -2,14 +2,32 @@ package common
 
 import (
 	"encoding/json"
-	"log"
+
 	"strconv"
 	"time"
 
 	"../database"
 	"../socket"
-	"github.com/gorilla/websocket"
 )
+
+func Iplistread(loginUuid string) (string, bool) {
+	Mutexiplist.Lock()
+	defer Mutexiplist.Unlock()
+	ip, ok := Iplist[loginUuid]
+	return ip, ok
+}
+
+func Iplistinsert(loginUuid string, ip string) {
+	Mutexiplist.Lock()
+	defer Mutexiplist.Unlock()
+	Iplist[loginUuid] = ip
+}
+
+func Iplistdelete(loginUuid string) {
+	Mutexiplist.Lock()
+	defer Mutexiplist.Unlock()
+	delete(Iplist, loginUuid)
+}
 
 func Clientsread(loginUuid string) (Client, bool) {
 	Mutexclients.Lock()
@@ -103,14 +121,14 @@ func Clientssidetextuserdelete(loginUuid string, targetUuid string) {
 	delete(Clients[loginUuid].Sidetext, targetUuid)
 }
 
-func Clientsconnectread(uuid string) (map[string]*websocket.Conn, bool) {
+func Clientsconnectread(uuid string) (map[string]Conncore, bool) {
 	Mutexclientsconnect.Lock()
 	defer Mutexclientsconnect.Unlock()
 	clientConnect, ok := Clientsconnect[uuid]
 	return clientConnect, ok
 }
 
-func Clientsconnectinsert(uuid string, connect map[string]*websocket.Conn) {
+func Clientsconnectinsert(uuid string, connect map[string]Conncore) {
 	Mutexclientsconnect.Lock()
 	defer Mutexclientsconnect.Unlock()
 	Clientsconnect[uuid] = connect
@@ -122,7 +140,7 @@ func Clientsconnectdelete(uuid string) {
 	delete(Clientsconnect, uuid)
 }
 
-func Clientsconnectloginuuidinsert(uuid string, loginuuid string, connect *websocket.Conn) {
+func Clientsconnectloginuuidinsert(uuid string, loginuuid string, connect Conncore) {
 	Mutexclientsconnect.Lock()
 	defer Mutexclientsconnect.Unlock()
 	Clientsconnect[uuid][loginuuid] = connect
@@ -298,62 +316,80 @@ func Hierarchytargetinfosearch(loginUuid string, userUuid string, targetUuid str
 		exception = Exception("COMMON_HIERARCHYTARGETINFOSEARCH_TARGET_UUID_NULL", userUuid, nil)
 		return targetInfo, false, exception
 	}
-	targetInfo, ok := Usersinforead(targetUuid)
-	if !ok {
-		targetInfo, ok = Getredisuserinfo(targetUuid)
-		if ok {
-			log.Printf("Getredisuserinfo targetUuid = "+targetUuid+"  targetInfoUser : %+v\n", targetInfo)
-			return targetInfo, true, exception
-		}
 
-		row := database.QueryRow("SELECT uuid,platformUuid,platform,globalRole FROM users WHERE uuid = ?",
-			targetUuid,
-		)
-		err := row.Scan(&targetInfo.Userplatform.Useruuid, &targetInfo.Userplatform.Platformuuid, &targetInfo.Userplatform.Platform, &targetInfo.Globalrole)
-		if err != nil {
-			exception = Exception("COMMON_HIERARCHYTARGETINFOSEARCH_SELECT_USER_ERROR", userUuid, nil)
-			return targetInfo, false, exception
-		}
-
-		// log.Printf("SELECT uuid,platformUuid,platform,globalRole FROM users WHERE uuid = " + targetUuid + "\n")
-		// log.Printf("Hierarchytargetinfosearch SELECT targetInfoUser : %+v\n", targetInfo)
-
-		rows, _ := database.Query("select roomUuid from vipGroupUserList where userUuid = ?",
-			targetUuid,
-		)
-		for rows.Next() {
-			var roomUuid string
-			rows.Scan(&roomUuid)
-			if targetInfo.Vipgroup == "" {
-				targetInfo.Vipgroup = roomUuid
-			} else {
-				targetInfo.Vipgroup = targetInfo.Vipgroup + "," + roomUuid
-			}
-		}
-		rows.Close()
-
-		// log.Printf("SELECT uuid,platformUuid,platform,globalRole FROM users WHERE uuid = " + targetUuid + "\n")
-		// log.Printf("Hierarchytargetinfosearch vipGroup targetInfoUser : %+v\n", targetInfo)
-
-		rows, _ = database.Query("select roomUuid from privateGroupUserList where userUuid = ?",
-			targetUuid,
-		)
-		for rows.Next() {
-			var roomUuid string
-			rows.Scan(&roomUuid)
-			if targetInfo.Privategroup == "" {
-				targetInfo.Privategroup = roomUuid
-			} else {
-				targetInfo.Privategroup = targetInfo.Privategroup + "," + roomUuid
-			}
-		}
-		rows.Close()
-
-		//log.Printf("targetInfo Usersinforead ok : %+v \n", ok)
-		//log.Printf("Hierarchytargetinfosearch targetInfoUser : %+v\n", targetInfo)
-		Setredisuserinfo(targetUuid, targetInfo)
-
+	//資料同步在redis所以直接從redis取，不取本地端
+	targetInfo, ok := Getredisuserinfo(targetUuid)
+	if ok {
+		// log.Printf("Getredisuserinfo targetUuid = "+targetUuid+"  targetInfoUser : %+v\n", targetInfo)
+		return targetInfo, true, exception
 	}
 
+	row := database.QueryRow("SELECT uuid,platformUuid,platform,globalRole FROM users WHERE uuid = ?",
+		targetUuid,
+	)
+	err := row.Scan(&targetInfo.Userplatform.Useruuid, &targetInfo.Userplatform.Platformuuid, &targetInfo.Userplatform.Platform, &targetInfo.Globalrole)
+	if err != nil {
+		exception = Exception("COMMON_HIERARCHYTARGETINFOSEARCH_SELECT_USER_ERROR", userUuid, nil)
+		return targetInfo, false, exception
+	}
+
+	// log.Printf("SELECT uuid,platformUuid,platform,globalRole FROM users WHERE uuid = " + targetUuid + "\n")
+	// log.Printf("Hierarchytargetinfosearch SELECT targetInfoUser : %+v\n", targetInfo)
+
+	rows, _ := database.Query("select roomUuid from vipGroupUserList where userUuid = ?",
+		targetUuid,
+	)
+	for rows.Next() {
+		var roomUuid string
+		rows.Scan(&roomUuid)
+		if targetInfo.Vipgroup == "" {
+			targetInfo.Vipgroup = roomUuid
+		} else {
+			targetInfo.Vipgroup = targetInfo.Vipgroup + "," + roomUuid
+		}
+	}
+	rows.Close()
+
+	// log.Printf("SELECT uuid,platformUuid,platform,globalRole FROM users WHERE uuid = " + targetUuid + "\n")
+	// log.Printf("Hierarchytargetinfosearch vipGroup targetInfoUser : %+v\n", targetInfo)
+
+	rows, _ = database.Query("select roomUuid from privateGroupUserList where userUuid = ?",
+		targetUuid,
+	)
+	for rows.Next() {
+		var roomUuid string
+		rows.Scan(&roomUuid)
+		if targetInfo.Privategroup == "" {
+			targetInfo.Privategroup = roomUuid
+		} else {
+			targetInfo.Privategroup = targetInfo.Privategroup + "," + roomUuid
+		}
+	}
+	rows.Close()
+
+	// log.Printf("targetInfo Usersinforead ok : %+v \n", ok)
+	// log.Printf("Hierarchytargetinfosearch targetInfoUser : %+v\n", targetInfo)
+	Setredisuserinfo(targetUuid, targetInfo)
+
 	return targetInfo, true, exception
+}
+
+func Blocknewuserlistread(userUuid string) (int64, bool) {
+	Mutexblocknewuserlist.Lock()
+	defer Mutexblocknewuserlist.Unlock()
+	blockTime, ok := Blocknewuserlist[userUuid]
+	return blockTime, ok
+}
+
+func Blocknewuserlistinsert(userUuid string, blockTime int64) {
+	Mutexblocknewuserlist.Lock()
+	defer Mutexblocknewuserlist.Unlock()
+	Blocknewuserlist[userUuid] = blockTime
+	// log.Printf("userCheck Blocknewuserlistinsert Blocknewuserlist : %+v\n",  Blocknewuserlist)
+}
+
+func Blocknewuserlistdelete(userUuid string) {
+	Mutexblocknewuserlist.Lock()
+	defer Mutexblocknewuserlist.Unlock()
+	delete(Blocknewuserlist, userUuid)
 }

@@ -7,21 +7,21 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/olivere/elastic"
 
 	"../../common"
 	"../../socket"
 )
 
-func Getroomhistory(connect *websocket.Conn, msg []byte, loginUuid string) error {
+func Getroomhistory(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendRoomHistory := socket.Cmd_r_get_chat_history{Base_R: socket.Base_R{
 		Cmd:   socket.CMD_R_GET_CHAT_HISTORY,
 		Stamp: timeUnix,
 	}}
-	userPlatform, _ := common.Clientsuserplatformread(loginUuid)
+	client, _ := common.Clientsread(loginUuid)
+	userPlatform := client.Userplatform
 	userUuid := userPlatform.Useruuid
 
 	var packetRoomHistory socket.Cmd_c_get_room_chat_history
@@ -30,7 +30,7 @@ func Getroomhistory(connect *websocket.Conn, msg []byte, loginUuid string) error
 		sendRoomHistory.Base_R.Result = "err"
 		sendRoomHistory.Base_R.Exp = common.Exception("COMMAND_GETROOMHISTORY_JSON_ERROR", userUuid, err)
 		sendRoomHistoryJson, _ := json.Marshal(sendRoomHistory)
-		common.Sendmessage(connect, sendRoomHistoryJson)
+		common.Sendmessage(connCore, sendRoomHistoryJson)
 		return err
 	}
 
@@ -43,7 +43,7 @@ func Getroomhistory(connect *websocket.Conn, msg []byte, loginUuid string) error
 		sendRoomHistory.Base_R.Result = "err"
 		sendRoomHistory.Base_R.Exp = common.Exception("COMMAND_GETROOMHISTORY_ROOM_UUID_ERROR", userUuid, nil)
 		sendRoomHistoryJson, _ := json.Marshal(sendRoomHistory)
-		common.Sendmessage(connect, sendRoomHistoryJson)
+		common.Sendmessage(connCore, sendRoomHistoryJson)
 		return nil
 	}
 
@@ -70,7 +70,7 @@ func Getroomhistory(connect *websocket.Conn, msg []byte, loginUuid string) error
 	historyUuid := startStampHex
 
 	boolQ := elastic.NewBoolQuery()
-	boolQ.Must(elastic.NewMatchQuery("chatTarget", roomCore.Roomuuid))
+	boolQ.Filter(elastic.NewMatchQuery("chatTarget", roomCore.Roomuuid))
 	boolQ.Filter(elastic.NewRangeQuery("historyUuid").Gte(startStampHex).Lt(endStampHex))
 
 	// Search with a term query
@@ -80,7 +80,7 @@ func Getroomhistory(connect *websocket.Conn, msg []byte, loginUuid string) error
 		sendRoomHistory.Base_R.Result = "err"
 		sendRoomHistory.Base_R.Exp = common.Exception("COMMAND_GETROOMHISTORY_ES_SEARCH_ERROR", userUuid, err)
 		sendRoomHistoryJson, _ := json.Marshal(sendRoomHistory)
-		common.Sendmessage(connect, sendRoomHistoryJson)
+		common.Sendmessage(connCore, sendRoomHistoryJson)
 		return err
 	}
 
@@ -94,23 +94,27 @@ func Getroomhistory(connect *websocket.Conn, msg []byte, loginUuid string) error
 			// log.Printf("hit : %+v\n", hit)
 			// Deserialize hit.Source into a Tweet (could also be just a map[string]interface{}).
 			var chatHistory common.Chathistory
-
-			var chatMessage socket.Chatmessage
 			err := json.Unmarshal(hit.Source, &chatHistory)
 			if err != nil {
 				// Deserialization failed
 			}
-
 			// Work with tweet
 			// log.Printf("ChatMessage : %+v\n", chatHistory)
 
-			chatMessage.Historyuuid = chatHistory.Historyuuid
-			chatMessage.From.Useruuid = chatHistory.Myuuid
-			chatMessage.From.Platformuuid = chatHistory.Myplatformuuid
-			chatMessage.From.Platform = chatHistory.Myplatform
-			chatMessage.Stamp = chatHistory.Stamp
-			chatMessage.Message = chatHistory.Message
-			chatMessage.Style = chatHistory.Style
+			fromUserPlatform := socket.Userplatform{
+				Useruuid:     chatHistory.Myuuid,
+				Platformuuid: chatHistory.Myplatformuuid,
+				Platform:     chatHistory.Myplatform,
+			}
+			chatMessage := socket.Chatmessage{
+				Historyuuid:        chatHistory.Historyuuid,
+				From:               fromUserPlatform,
+				Stamp:              chatHistory.Stamp,
+				Message:            chatHistory.Message,
+				Style:              chatHistory.Style,
+				Ip:                 chatHistory.Ip,
+				Forwardchatmessage: chatHistory.Forwardchatmessage,
+			}
 
 			chatHistoryList = append(chatHistoryList, chatMessage)
 
@@ -132,7 +136,7 @@ func Getroomhistory(connect *websocket.Conn, msg []byte, loginUuid string) error
 	// log.Printf("sendRoomHistory : %+v\n", sendRoomHistory)
 
 	sendRoomHistoryJson, _ := json.Marshal(sendRoomHistory)
-	common.Sendmessage(connect, sendRoomHistoryJson)
+	common.Sendmessage(connCore, sendRoomHistoryJson)
 
 	return nil
 }

@@ -5,13 +5,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gorilla/websocket"
-
 	"../common"
 	"../socket"
 )
 
-func Proclamationsearch(connect *websocket.Conn, msg []byte) error {
+func Proclamationsearch(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendProclamationSearch := socket.Cmd_r_proclamation{Base_R: socket.Base_R{
@@ -25,7 +23,7 @@ func Proclamationsearch(connect *websocket.Conn, msg []byte) error {
 		sendProclamationSearch.Base_R.Result = "err"
 		sendProclamationSearch.Base_R.Exp = common.Exception("COMMAND_PROCLAMATIONSEARCH_JSON_ERROR", "", err)
 		sendProclamationSearchJson, _ := json.Marshal(sendProclamationSearch)
-		common.Sendmessage(connect, sendProclamationSearchJson)
+		common.Sendmessage(connCore, sendProclamationSearchJson)
 		return err
 	}
 	sendProclamationSearch.Base_R.Idem = packetProclamation.Base_C.Idem
@@ -35,7 +33,7 @@ func Proclamationsearch(connect *websocket.Conn, msg []byte) error {
 	sendProclamationSearch.Result = "ok"
 	sendProclamationSearch.Payload = proclamationlist
 	sendProclamationSearchJson, _ := json.Marshal(sendProclamationSearch)
-	common.Sendmessage(connect, sendProclamationSearchJson)
+	common.Sendmessage(connCore, sendProclamationSearchJson)
 
 	return nil
 }

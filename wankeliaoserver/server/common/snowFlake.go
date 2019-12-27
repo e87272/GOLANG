@@ -25,7 +25,7 @@ type UUID int64
 
 var timestamp int64
 var number int64
-var mutex sync.Mutex
+var mutex = new(sync.Mutex)
 
 // 生成方法一定要掛載在某個woker下，這樣邏輯會比較清晰 指定某個節點生成id
 func Getid() UUID {

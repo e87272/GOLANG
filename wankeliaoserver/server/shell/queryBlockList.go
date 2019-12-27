@@ -8,10 +8,9 @@ import (
 
 	"../common"
 	"../socket"
-	"github.com/gorilla/websocket"
 )
 
-func queryBlockList(connect *websocket.Conn, userPlatform socket.Userplatform, packetSendMsg socket.Cmd_c_player_send_shell, timeUnix string) error {
+func queryBlockList(connCore common.Conncore, userPlatform socket.Userplatform, packetSendMsg socket.Cmd_c_player_send_shell, timeUnix string) error {
 
 	argument := regexp.MustCompile(" +-").Split(strings.Trim(packetSendMsg.Payload.Message, " "), -1)
 	shellCmd := regexp.MustCompile(" +").Split(argument[0], -1)
@@ -19,7 +18,7 @@ func queryBlockList(connect *websocket.Conn, userPlatform socket.Userplatform, p
 	if len(shellCmd) != 2 {
 		SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendMsg.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_QUERYBLOCKLIST_PARAMETER_ERROR", userPlatform.Useruuid, nil)}}
 		SendMsgJson, _ := json.Marshal(SendMsg)
-		common.Sendmessage(connect, SendMsgJson)
+		common.Sendmessage(connCore, SendMsgJson)
 		return nil
 	}
 
@@ -40,7 +39,7 @@ func queryBlockList(connect *websocket.Conn, userPlatform socket.Userplatform, p
 	if err != nil {
 		SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendMsg.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_QUERYBLOCKLIST_JSON_ERROR", userPlatform.Useruuid, err)}}
 		SendMsgJson, _ := json.Marshal(SendMsg)
-		common.Sendmessage(connect, SendMsgJson)
+		common.Sendmessage(connCore, SendMsgJson)
 		// log.Printf("err : %+v\n", err)
 		return nil
 	}
@@ -48,7 +47,7 @@ func queryBlockList(connect *websocket.Conn, userPlatform socket.Userplatform, p
 
 	SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendMsg.Idem, Stamp: timeUnix, Result: "ok", Exp: common.Exception("", "", nil)}, Payload: string(blockChatListJson)}
 	SendMsgJson, _ := json.Marshal(SendMsg)
-	common.Sendmessage(connect, SendMsgJson)
+	common.Sendmessage(connCore, SendMsgJson)
 
 	return nil
 }

@@ -26,7 +26,7 @@ func subscription(w http.ResponseWriter, r *http.Request) {
 
 	platformUuid := r.FormValue("platformUuid")
 	platform := r.FormValue("platform")
-	roomUuid := r.FormValue("roomUuid")
+	ownerPlatformUuid := r.FormValue("ownerPlatformUuid")
 	// log.Printf("userUuid = %s\n", platformUuid)
 	// log.Printf("platform = %s\n", platform)
 	// log.Printf("roomUuid = %s\n", roomUuid)
@@ -43,6 +43,17 @@ func subscription(w http.ResponseWriter, r *http.Request) {
 		common.Essyserrorlog("API_SUBSCRIPTION_DB_NO_DATA", r.Header["Client-Name"][0], nil)
 		return
 	}
+	
+	roomUuid, ok, exception := common.Hierarchytokensearch(r.Header["Client-Name"][0], r.Header["Client-Name"][0], ownerPlatformUuid, "MM")
+	
+	if !ok {
+
+		result["result"] = "err"
+		result["message"] = exception.Message
+		common.ResponseWithJson(w, http.StatusOK, result)
+		return
+	}
+
 	historyUuid := common.Getid().Hexstring()
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	chatMessage := socket.Chatmessage{Historyuuid: historyUuid, From: userPlatform, Stamp: timeUnix, Message: "subscription", Style: "subscription"}
@@ -65,7 +76,7 @@ func subscription(w http.ResponseWriter, r *http.Request) {
 
 	// log.Printf("chatMessageHsitory : %+v\n", chatMessageHsitory)
 
-	err = common.Esinsert(os.Getenv("sysRoomLog"), string(chatMessageJson[:]))
+	err = common.Esinsert(os.Getenv("sysRoomLog"), string(chatMessageJson))
 
 	// log.Printf("Playersendmsg err : %+v\n", err)
 	return

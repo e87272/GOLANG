@@ -9,7 +9,7 @@ import (
 
 func serverAliveList(w http.ResponseWriter, r *http.Request) {
 
-	ok := common.Apicheck(w, r, "/emit/serverAliveList")
+	ok := common.Apicheck(w, r, "/server/serverAliveList")
 	if !ok {
 		return
 	}

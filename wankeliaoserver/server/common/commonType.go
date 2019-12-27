@@ -1,19 +1,26 @@
 package common
 
 import (
+	"sync"
+
 	"../socket"
 	"github.com/gorilla/websocket"
 )
 
+type Conncore struct {
+	Conn      *websocket.Conn
+	Connmutex *sync.Mutex
+}
+
 type Client struct {
 	Room         map[string]socket.Roomcore
-	Conn         *websocket.Conn
+	Conncore     Conncore
 	Userplatform socket.Userplatform
 	Sidetext     map[string]Sidetextplatform
 }
 
 type Roomclient struct {
-	Conn         *websocket.Conn
+	Conncore     Conncore
 	Userplatform socket.Userplatform
 }
 
@@ -28,14 +35,16 @@ type Redispubsubuserdata struct {
 }
 
 type Chathistory struct {
-	Historyuuid    string `json:"historyUuid"`
-	Chattarget     string `json:"chatTarget"`
-	Myuuid         string `json:"myUuid"`
-	Myplatformuuid string `json:"myPlatformUuid"`
-	Myplatform     string `json:"myPlatform"`
-	Stamp          string `json:"stamp"`
-	Message        string `json:"message"`
-	Style          string `json:"style"`
+	Historyuuid        string `json:"historyUuid"`
+	Chattarget         string `json:"chatTarget"`
+	Myuuid             string `json:"myUuid"`
+	Myplatformuuid     string `json:"myPlatformUuid"`
+	Myplatform         string `json:"myPlatform"`
+	Stamp              string `json:"stamp"`
+	Message            string `json:"message"`
+	Style              string `json:"style"`
+	Ip                 string `json:"ip"`
+	Forwardchatmessage string `json:"forwardChatMessage"`
 }
 
 type Redispubsubsidetextdata struct {
@@ -46,9 +55,9 @@ type Redispubsubsidetextdata struct {
 
 type Redispubsubroomsinfo struct {
 	Ip        string
-	RoomUuid  string
+	Roomuuid  string
 	Usercount int
-	DataJson  string
+	Datajson  string
 }
 
 type Syncdata struct {
@@ -84,6 +93,11 @@ type Redispubsubinvitedata struct {
 
 type Redispubsubfrienddeletedata struct {
 	Useruuid   string
+	Targetuuid string
+}
+
+type Redispubsubclearusermsgdata struct {
+	Roomuuid   string
 	Targetuuid string
 }
 

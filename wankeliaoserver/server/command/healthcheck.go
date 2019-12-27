@@ -5,13 +5,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gorilla/websocket"
-
 	"../common"
 	"../socket"
 )
 
-func Healthcheck(connect *websocket.Conn, msg []byte) error {
+func Healthcheck(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	// log.Printf("timeUnix : %s\n", timeUnix)
@@ -22,9 +20,9 @@ func Healthcheck(connect *websocket.Conn, msg []byte) error {
 		return err
 	}
 
-	SendHealthCheck := socket.Cmd_r_healthcheck{Base_R: socket.Base_R{Cmd: socket.CMD_R_PING, Idem: packetHealthCheck.Idem, Stamp: timeUnix, Result: "ok", Exp: common.Exception("","",nil)}, Payload: "PONG"}
+	SendHealthCheck := socket.Cmd_r_healthcheck{Base_R: socket.Base_R{Cmd: socket.CMD_R_PING, Idem: packetHealthCheck.Idem, Stamp: timeUnix, Result: "ok", Exp: common.Exception("", "", nil)}, Payload: "PONG"}
 	SendHealthCheckJson, _ := json.Marshal(SendHealthCheck)
-	common.Sendmessage(connect, SendHealthCheckJson)
+	common.Sendmessage(connCore, SendHealthCheckJson)
 
 	return nil
 }

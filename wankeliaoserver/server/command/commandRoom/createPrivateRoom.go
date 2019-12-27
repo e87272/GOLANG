@@ -13,18 +13,19 @@ import (
 	"../../common"
 	"../../database"
 	"../../socket"
-	"github.com/gorilla/websocket"
 )
 
-func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) error {
+func Createprivateroom(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendCreatePrivateRoom := socket.Cmd_r_create_private_room{Base_R: socket.Base_R{
 		Cmd:   socket.CMD_R_CREATE_PRIVATE_ROOM,
 		Stamp: timeUnix,
 	}}
-	userPlatform, _ := common.Clientsuserplatformread(loginUuid)
+	client, _ := common.Clientsread(loginUuid)
+	userPlatform := client.Userplatform
 	userUuid := userPlatform.Useruuid
+	
 
 	maxLength := 30
 
@@ -35,7 +36,7 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 		sendCreatePrivateRoom.Base_R.Result = "err"
 		sendCreatePrivateRoom.Base_R.Exp = common.Exception("COMMAND_CREATEPRIVATEROOM_JSON_ERROR", userUuid, err)
 		sendCreatePrivateRoomJson, _ := json.Marshal(sendCreatePrivateRoom)
-		common.Sendmessage(connect, sendCreatePrivateRoomJson)
+		common.Sendmessage(connCore, sendCreatePrivateRoomJson)
 		return err
 	}
 	sendCreatePrivateRoom.Base_R.Idem = packetCreatePrivateRoom.Base_C.Idem
@@ -45,7 +46,16 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 		sendCreatePrivateRoom.Base_R.Result = "err"
 		sendCreatePrivateRoom.Base_R.Exp = common.Exception("COMMAND_CREATEPRIVATEROOM_GUEST", userUuid, nil)
 		sendCreatePrivateRoomJson, _ := json.Marshal(sendCreatePrivateRoom)
-		common.Sendmessage(connect, sendCreatePrivateRoomJson)
+		common.Sendmessage(connCore, sendCreatePrivateRoomJson)
+		return nil
+	}
+
+	clientIp, ok := common.Iplistread(loginUuid)
+	if !ok {
+		sendCreatePrivateRoom.Base_R.Result = "err"
+		sendCreatePrivateRoom.Base_R.Exp = common.Exception("COMMAND_CREATEPRIVATEROOM_IP_READ_ERROR", userUuid, nil)
+		sendCreatePrivateRoomJson, _ := json.Marshal(sendCreatePrivateRoom)
+		common.Sendmessage(connCore, sendCreatePrivateRoomJson)
 		return nil
 	}
 
@@ -54,7 +64,7 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 		sendCreatePrivateRoom.Base_R.Result = "err"
 		sendCreatePrivateRoom.Base_R.Exp = common.Exception("COMMAND_CREATEPRIVATEROOM_NOT_ADMIN", userUuid, nil)
 		sendCreatePrivateRoomJson, _ := json.Marshal(sendCreatePrivateRoom)
-		common.Sendmessage(connect, sendCreatePrivateRoomJson)
+		common.Sendmessage(connCore, sendCreatePrivateRoomJson)
 		return nil
 	}
 
@@ -62,7 +72,7 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 		sendCreatePrivateRoom.Base_R.Result = "err"
 		sendCreatePrivateRoom.Base_R.Exp = common.Exception("COMMAND_CREATEPRIVATEROOM_ROOM_NAME_ERROR", userUuid, nil)
 		sendCreatePrivateRoomJson, _ := json.Marshal(sendCreatePrivateRoom)
-		common.Sendmessage(connect, sendCreatePrivateRoomJson)
+		common.Sendmessage(connCore, sendCreatePrivateRoomJson)
 		return nil
 	}
 
@@ -71,7 +81,7 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 		sendCreatePrivateRoom.Base_R.Result = "err"
 		sendCreatePrivateRoom.Base_R.Exp = common.Exception("COMMAND_CREATEPRIVATEROOM_DIRTY_WORD", userUuid, nil)
 		sendCreatePrivateRoomJson, _ := json.Marshal(sendCreatePrivateRoom)
-		common.Sendmessage(connect, sendCreatePrivateRoomJson)
+		common.Sendmessage(connCore, sendCreatePrivateRoomJson)
 		return nil
 	}
 
@@ -82,7 +92,7 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 			sendCreatePrivateRoom.Base_R.Result = "err"
 			sendCreatePrivateRoom.Base_R.Exp = common.Exception("COMMAND_CREATEPRIVATEROOM_ROOM_ICON_TOO_LARGE", userUuid, nil)
 			sendCreatePrivateRoomJson, _ := json.Marshal(sendCreatePrivateRoom)
-			common.Sendmessage(connect, sendCreatePrivateRoomJson)
+			common.Sendmessage(connCore, sendCreatePrivateRoomJson)
 			return nil
 		}
 
@@ -93,7 +103,7 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 			sendCreatePrivateRoom.Base_R.Result = "err"
 			sendCreatePrivateRoom.Base_R.Exp = common.Exception("COMMAND_CREATEPRIVATEROOM_ROOM_ICON_ERROR", userUuid, err)
 			sendCreatePrivateRoomJson, _ := json.Marshal(sendCreatePrivateRoom)
-			common.Sendmessage(connect, sendCreatePrivateRoomJson)
+			common.Sendmessage(connCore, sendCreatePrivateRoomJson)
 			return nil
 		}
 
@@ -103,7 +113,7 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 		if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
 			os.Mkdir(uploadPath, os.ModePerm)
 		}
-		roomIconLink = strconv.Itoa(thisTime.Year()) + strconv.Itoa(int(thisTime.Month())) + fileName
+		roomIconLink = "/" + strconv.Itoa(thisTime.Year()) + strconv.Itoa(int(thisTime.Month())) + fileName
 		ioutil.WriteFile(uploadPath+fileName, decodeBytes, os.ModePerm)
 	}
 
@@ -119,9 +129,19 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 		sendCreatePrivateRoom.Base_R.Result = "err"
 		sendCreatePrivateRoom.Base_R.Exp = common.Exception("COMMAND_CREATEPRIVATEROOM_INSERT_DB_ERROR", userUuid, err)
 		sendCreatePrivateRoomJson, _ := json.Marshal(sendCreatePrivateRoom)
-		common.Sendmessage(connect, sendCreatePrivateRoomJson)
+		common.Sendmessage(connCore, sendCreatePrivateRoomJson)
 		return nil
 	}
+
+	chatMessage := socket.Chatmessage{
+		Historyuuid: roomUuid,
+		From:        userPlatform,
+		Stamp:       timeUnix,
+		Message:     "create room",
+		Style:       "sys",
+		Ip:          clientIp,
+	}
+	common.Setredisroomlastmessage(roomUuid, chatMessage)
 
 	chatMessageHsitory := common.Chathistory{
 		Historyuuid:    roomUuid,
@@ -132,10 +152,10 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 		Stamp:          timeUnix,
 		Message:        "create room",
 		Style:          "sys",
+		Ip:             clientIp,
 	}
-	chatMessageJson, _ := json.Marshal(chatMessageHsitory)
-
-	err = common.Esinsert(os.Getenv("privateGroup"), string(chatMessageJson))
+	chatMessageHsitoryJson, _ := json.Marshal(chatMessageHsitory)
+	err = common.Esinsert(os.Getenv("privateGroup"), string(chatMessageHsitoryJson))
 	if err != nil {
 		common.Essyslog("Esinsert "+os.Getenv("privateGroup")+" err: "+err.Error(), loginUuid, userUuid)
 	}
@@ -155,7 +175,7 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 		sendCreatePrivateRoom.Base_R.Result = "err"
 		sendCreatePrivateRoom.Base_R.Exp = common.Exception("COMMAND_CREATEPRIVATEROOM_INSERT_USER_LIST_ERROR", userUuid, err)
 		sendCreatePrivateRoomJson, _ := json.Marshal(sendCreatePrivateRoom)
-		common.Sendmessage(connect, sendCreatePrivateRoomJson)
+		common.Sendmessage(connCore, sendCreatePrivateRoomJson)
 		return nil
 	}
 
@@ -163,9 +183,11 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 	adminSet[userUuid] = roleUuid
 	adminSetJson, _ := json.Marshal(adminSet)
 	roomInfo := socket.Roominfo{
-		Roomuuid:      roomUuid,
+		Roomcore: socket.Roomcore{
+			Roomuuid: roomUuid,
+			Roomtype: "privateGroup",
+		},
 		Roomname:      packetCreatePrivateRoom.Payload.Roomname,
-		Roomtype:      "privateGroup",
 		Roomicon:      roomIconLink,
 		Adminset:      string(adminSetJson),
 		Ownerplatform: userPlatform,
@@ -186,7 +208,7 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 	sendCreatePrivateRoom.Payload.Roomuuid = roomUuid
 	sendCreatePrivateRoom.Payload.Roomtype = "privateGroup"
 	sendCreatePrivateRoomJson, _ := json.Marshal(sendCreatePrivateRoom)
-	common.Sendmessage(connect, sendCreatePrivateRoomJson)
+	common.Sendmessage(connCore, sendCreatePrivateRoomJson)
 
 	//自己也要收到71預防多登狀況
 	roomCoreList := []socket.Roomcore{}
@@ -224,23 +246,10 @@ func Createprivateroom(connect *websocket.Conn, msg []byte, loginUuid string) er
 			continue
 		}
 
-		uuid := common.Getid().Hexstring()
-		_, err = database.Exec(
-			"INSERT INTO `privateGroupUserList` (uuid, roomUuid, userUuid, roleSet) VALUES (?, ?, ?, ?)",
-			uuid,
-			roomUuid,
-			targetUuid,
-			"",
-		)
-
-		// log.Printf("INSERT INTO `privateGroupUserList` (uuid, roomUuid, userUuid, roleSet) VALUES (%+v, %+v, %+v, %+v)\n", uuid, roomUuid, targetuserUuid, "")
-
-		if err != nil {
-			common.Essyserrorlog("COMMAND_CREATEPRIVATEROOM_INSERT_PRIVATEGROUPUSERLIST_ERROR", "userUuid : "+userUuid+"  targetUserUuid : "+targetUserInfo.Userplatform.Useruuid, err)
+		ok, _ = common.Roominsertuser(userPlatform, targetUserInfo, roomInfo.Roomcore)
+		if !ok {
 			continue
 		}
-
-		common.Setredisfirstenterroom(roomUuid+targetUuid, userUuid)
 
 		roomCoreList := []socket.Roomcore{}
 		roomCoreList = append(roomCoreList, socket.Roomcore{Roomuuid: roomUuid, Roomtype: "privateGroup"})

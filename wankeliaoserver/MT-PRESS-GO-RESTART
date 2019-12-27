@@ -1,0 +1,15 @@
+#! /bin/bash
+# chkconfig: 2345 20 80
+# description: Start and Stop golang
+#. /etc/init.d/functions
+
+SERVICE='MT-PRESS-GO-AUTO'
+PROCESS='press10room'
+
+if ps ax | grep -v grep | grep $PROCESS > /dev/null
+then
+echo "$PROCESS service running, everything is fine"
+else
+echo "$PROCESS is not running"
+service $SERVICE restart
+fi

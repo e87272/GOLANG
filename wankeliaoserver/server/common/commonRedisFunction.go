@@ -39,7 +39,7 @@ func Redispubsidetextdata(userUuid string, targetUuid string, sideTextData []byt
 
 func Redispubroomsinfo(roomUuid string, roomBroadcastJson []byte) {
 
-	pubData := Redispubsubroomsinfo{Ip: Myiplastdigit(), RoomUuid: roomUuid, Usercount: Roomsmembercount(roomUuid), DataJson: string(roomBroadcastJson)}
+	pubData := Redispubsubroomsinfo{Ip: Myiplastdigit(), Roomuuid: roomUuid, Usercount: Roomsmembercount(roomUuid), Datajson: string(roomBroadcastJson)}
 	pubDataJson, _ := json.Marshal(pubData)
 	Redispubdata("roomsinfo", string(pubDataJson))
 

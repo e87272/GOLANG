@@ -7,18 +7,19 @@ import (
 
 	"../common"
 	"../socket"
-	"github.com/gorilla/websocket"
 )
 
-func Messageseen(connect *websocket.Conn, msg []byte, loginUuid string) error {
+func Messageseen(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendMessageSeen := socket.Cmd_r_message_seen{Base_R: socket.Base_R{
 		Cmd:   socket.CMD_R_MESSAGE_SEEN,
 		Stamp: timeUnix,
 	}}
-	userPlatform, _ := common.Clientsuserplatformread(loginUuid)
+	client, _ := common.Clientsread(loginUuid)
+	userPlatform := client.Userplatform
 	userUuid := userPlatform.Useruuid
+	
 
 	var packetMessageSeen socket.Cmd_c_message_seen
 
@@ -26,7 +27,7 @@ func Messageseen(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendMessageSeen.Base_R.Result = "err"
 		sendMessageSeen.Base_R.Exp = common.Exception("COMMAND_MESSAGESEEN_JSON_ERROR", userUuid, err)
 		sendMessageSeenJson, _ := json.Marshal(sendMessageSeen)
-		common.Sendmessage(connect, sendMessageSeenJson)
+		common.Sendmessage(connCore, sendMessageSeenJson)
 		return err
 	}
 	sendMessageSeen.Base_R.Idem = packetMessageSeen.Base_C.Idem
@@ -36,7 +37,7 @@ func Messageseen(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendMessageSeen.Base_R.Result = "err"
 		sendMessageSeen.Base_R.Exp = common.Exception("COMMAND_MESSAGESEEN_GUEST", userUuid, nil)
 		sendMessageSeenJson, _ := json.Marshal(sendMessageSeen)
-		common.Sendmessage(connect, sendMessageSeenJson)
+		common.Sendmessage(connCore, sendMessageSeenJson)
 		return nil
 	}
 
@@ -49,19 +50,19 @@ func Messageseen(connect *websocket.Conn, msg []byte, loginUuid string) error {
 			//block處理
 			messageSeen := socket.Cmd_r_message_seen{Base_R: socket.Base_R{Cmd: socket.CMD_R_MESSAGE_SEEN, Idem: packetMessageSeen.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("COMMAND_MESSAGESEEN_TARGET_ROOM_UUID_ERROR", userPlatform.Useruuid, nil)}}
 			messageSeenJson, _ := json.Marshal(messageSeen)
-			common.Sendmessage(connect, messageSeenJson)
+			common.Sendmessage(connCore, messageSeenJson)
 			return nil
 		}
 
-		if roomInfo.Roomtype == "liveGroup" {
+		if roomInfo.Roomcore.Roomtype == "liveGroup" {
 			//block處理
 			sendMessageSeen.Base_R.Result = "err"
 			sendMessageSeen.Base_R.Exp = common.Exception("COMMAND_MESSAGESEEN_TARGET_ROOM_TYPE_ERROR", userUuid, nil)
 			sendMessageSeenJson, _ := json.Marshal(sendMessageSeen)
-			common.Sendmessage(connect, sendMessageSeenJson)
+			common.Sendmessage(connCore, sendMessageSeenJson)
 			return nil
 		}
-		common.Setredisroomlastseen(roomInfo.Roomtype+"_"+roomInfo.Roomuuid+"_"+userPlatform.Useruuid, historyUuid)
+		common.Setredisroomlastseen(roomInfo.Roomcore.Roomtype+"_"+roomInfo.Roomcore.Roomuuid+"_"+userPlatform.Useruuid, historyUuid)
 		break
 	case "sideText":
 		targetPlatform, ok := common.Clientssidetextuserread(loginUuid, packetMessageSeen.Payload.Chattargetuuid)
@@ -71,7 +72,7 @@ func Messageseen(connect *websocket.Conn, msg []byte, loginUuid string) error {
 			sendMessageSeen.Base_R.Result = "err"
 			sendMessageSeen.Base_R.Exp = common.Exception("COMMAND_MESSAGESEEN_TARGET_SIDE_TEXT_UUID_ERROR", userUuid, nil)
 			sendMessageSeenJson, _ := json.Marshal(sendMessageSeen)
-			common.Sendmessage(connect, sendMessageSeenJson)
+			common.Sendmessage(connCore, sendMessageSeenJson)
 			return nil
 		}
 		common.Setredissidetextlastseen(targetPlatform.Sidetextuuid, historyUuid)
@@ -90,7 +91,7 @@ func Messageseen(connect *websocket.Conn, msg []byte, loginUuid string) error {
 
 	sendMessageSeen.Base_R.Result = "ok"
 	sendMessageSeenJson, _ := json.Marshal(sendMessageSeen)
-	common.Sendmessage(connect, sendMessageSeenJson)
+	common.Sendmessage(connCore, sendMessageSeenJson)
 
 	return nil
 }

@@ -27,7 +27,7 @@ type Cmd_c_player_exit_room struct {
 
 type Cmd_c_player_enter_room struct {
 	Base_C
-	Payload Roomcore `json:"payload"`
+	Payload Roomstation `json:"payload"`
 }
 
 type Cmd_c_room_info_edit struct {
@@ -76,6 +76,7 @@ type Cmd_c_chatblock struct {
 		Useruuid  string `json:"userUuid"`
 		Roomuuid  string `json:"roomUuid"`
 		Blocktime string `json:"blockTime"`
+		Blockip   string `json:"blockIp"`
 	} `json:"payload"`
 }
 
@@ -175,6 +176,16 @@ type Cmd_c_get_lang_list struct {
 	Payload string `json:"payload"`
 }
 
+type Cmd_c_clear_user_msg struct {
+	Base_C
+	Payload Clearusermsg `json:"payload"`
+}
+
+type Cmd_c_forward_msg struct {
+	Base_C
+	Payload Sendmessage `json:"payload"`
+}
+
 /* Message(-伺服器): type 必定為奇數 回覆 */
 
 type Cmd_r_token_change struct {
@@ -235,6 +246,10 @@ type Cmd_r_player_side_text struct {
 
 type Cmd_r_chatblock struct {
 	Base_R
+	Payload struct {
+		Useruuid string `json:"userUuid"`
+		Roomuuid string `json:"roomUuid"`
+	} `json:"payload"`
 }
 
 type Cmd_r_healthcheck struct {
@@ -332,6 +347,14 @@ type Cmd_r_room_admin_remove struct {
 type Cmd_r_get_lang_list struct {
 	Base_R
 	Payload map[string]string `json:"payload"`
+}
+
+type Cmd_r_clear_user_msg struct {
+	Base_R
+}
+
+type Cmd_r_forward_msg struct {
+	Base_R
 }
 
 /* Message(-伺服器): type 必定為奇數 廣播 */
@@ -445,4 +468,9 @@ type Cmd_b_room_member_count struct {
 		Roomuuid string `json:"roomUuid"`
 		Count    int    `json:"count"`
 	} `json:"payload"`
+}
+
+type Cmd_b_clear_user_msg struct {
+	Base_B
+	Payload Clearusermsg `json:"payload"`
 }

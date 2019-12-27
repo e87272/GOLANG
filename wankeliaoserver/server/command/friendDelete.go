@@ -5,22 +5,22 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gorilla/websocket"
-
 	"../common"
 	"../database"
 	"../socket"
 )
 
-func Frienddelete(connect *websocket.Conn, msg []byte, loginUuid string) error {
+func Frienddelete(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendDelete := socket.Cmd_r_friend_delete{Base_R: socket.Base_R{
 		Cmd:   socket.CMD_R_FRIEND_DELETE,
 		Stamp: timeUnix,
 	}}
-	userPlatform, _ := common.Clientsuserplatformread(loginUuid)
+	client, _ := common.Clientsread(loginUuid)
+	userPlatform := client.Userplatform
 	userUuid := userPlatform.Useruuid
+	
 
 	var packetDelete socket.Cmd_c_friend_delete
 	err := json.Unmarshal([]byte(msg), &packetDelete)
@@ -28,7 +28,7 @@ func Frienddelete(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendDelete.Base_R.Result = "err"
 		sendDelete.Base_R.Exp = common.Exception("COMMAND_FRIENDDELETE_JSON_ERROR", userUuid, err)
 		sendDeleteJson, _ := json.Marshal(sendDelete)
-		common.Sendmessage(connect, sendDeleteJson)
+		common.Sendmessage(connCore, sendDeleteJson)
 		return err
 	}
 	sendDelete.Base_R.Idem = packetDelete.Base_C.Idem
@@ -37,7 +37,7 @@ func Frienddelete(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendDelete.Base_R.Result = "err"
 		sendDelete.Base_R.Exp = common.Exception("COMMAND_FRIENDDELETE_GUEST", userUuid, nil)
 		sendDeleteJson, _ := json.Marshal(sendDelete)
-		common.Sendmessage(connect, sendDeleteJson)
+		common.Sendmessage(connCore, sendDeleteJson)
 		return nil
 	}
 
@@ -56,7 +56,7 @@ func Frienddelete(connect *websocket.Conn, msg []byte, loginUuid string) error {
 				sendDelete.Base_R.Result = "err"
 				sendDelete.Base_R.Exp = common.Exception("COMMAND_FRIENDDELETE_FRIEND_DELETELIST_ERROR", userUuid, err)
 				sendDeleteJson, _ := json.Marshal(sendDelete)
-				common.Sendmessage(connect, sendDeleteJson)
+				common.Sendmessage(connCore, sendDeleteJson)
 				return err
 			}
 			_, err = database.Exec(
@@ -68,7 +68,7 @@ func Frienddelete(connect *websocket.Conn, msg []byte, loginUuid string) error {
 				sendDelete.Base_R.Result = "err"
 				sendDelete.Base_R.Exp = common.Exception("COMMAND_FRIENDDELETE_FRIEND_DELETELIST_ERROR", userUuid, err)
 				sendDeleteJson, _ := json.Marshal(sendDelete)
-				common.Sendmessage(connect, sendDeleteJson)
+				common.Sendmessage(connCore, sendDeleteJson)
 				return err
 			}
 		default:
@@ -76,7 +76,7 @@ func Frienddelete(connect *websocket.Conn, msg []byte, loginUuid string) error {
 			sendDelete.Base_R.Result = "err"
 			sendDelete.Base_R.Exp = common.Exception("COMMAND_FRIENDDELETE_FRIEND_STATE_ERROR", userUuid, nil)
 			sendDeleteJson, _ := json.Marshal(sendDelete)
-			common.Sendmessage(connect, sendDeleteJson)
+			common.Sendmessage(connCore, sendDeleteJson)
 			return nil
 		}
 	} else {
@@ -84,13 +84,13 @@ func Frienddelete(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendDelete.Base_R.Result = "err"
 		sendDelete.Base_R.Exp = common.Exception("COMMAND_FRIENDDELETE_FRIEND_STATE_ERROR", userUuid, nil)
 		sendDeleteJson, _ := json.Marshal(sendDelete)
-		common.Sendmessage(connect, sendDeleteJson)
+		common.Sendmessage(connCore, sendDeleteJson)
 
 	}
 
 	sendDelete.Base_R.Result = "ok"
 	sendDeleteJson, _ := json.Marshal(sendDelete)
-	common.Sendmessage(connect, sendDeleteJson)
+	common.Sendmessage(connCore, sendDeleteJson)
 
 	userFriend := socket.Friendplatform{}
 	userFriend.Userplatform = userPlatform

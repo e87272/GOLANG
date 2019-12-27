@@ -2,7 +2,7 @@ package common
 
 import (
 	"encoding/json"
-	"log"
+
 	"strconv"
 	"time"
 
@@ -20,7 +20,7 @@ func Subscriberoom() {
 
 	_, err := Redispubsub.Receive()
 	if err != nil {
-		log.Printf("Subscriberoom err : %+v\n", err)
+		// log.Printf("Subscriberoom err : %+v\n", err)
 		return
 	}
 	ch := Redispubsub.Channel()
@@ -33,10 +33,29 @@ func Subscriberoom() {
 			panic(err)
 		}
 
+		var playerSpeak socket.Cmd_b_player_speak
+
+		err := json.Unmarshal([]byte(data.Datajson), &playerSpeak)
+		if err != nil {
+			panic(err)
+		}
+
+		packetStamp, _ := strconv.ParseInt(playerSpeak.Stamp, 10, 64)
+
+		switch playerSpeak.Payload.Chatmessage.Style {
+		case "sys", "gift", "subscription":
+		default:
+			_, ok := Usersinforead(playerSpeak.Payload.Chatmessage.From.Useruuid)
+
+			if ok {
+				Isspeakcd(playerSpeak.Payload.Chatmessage.From.Useruuid, playerSpeak.Payload.Chatmessage.Stamp)
+			}
+		}
+
 		// log.Printf("Subscriberoom : %+v\n", data.Datajson)
 		// log.Printf("Subscriberoom time: %+v\n", time.Now())
 
-		go Broadcast(data.RoomUuid, []byte(data.Datajson))
+		go Broadcast(data.RoomUuid, []byte(data.Datajson), packetStamp)
 
 	}
 
@@ -53,7 +72,7 @@ func Subscribeuser() {
 
 	_, err := Redispubsub.Receive()
 	if err != nil {
-		log.Printf("Subscribeuser err : %+v\n", err)
+		// log.Printf("Subscribeuser err : %+v\n", err)
 		return
 	}
 	ch := Redispubsub.Channel()
@@ -118,7 +137,7 @@ func Subscriberoomsinfo() {
 
 	_, err := Redispubsub.Receive()
 	if err != nil {
-		log.Printf("Subscriberoomsinfo err : %+v\n", err)
+		// log.Printf("Subscriberoomsinfo err : %+v\n", err)
 		return
 	}
 	ch := Redispubsub.Channel()
@@ -131,9 +150,17 @@ func Subscriberoomsinfo() {
 			panic(err)
 		}
 
+		var playerRoom socket.Cmd_b_player_room
+
+		err := json.Unmarshal([]byte(data.Datajson), &playerRoom)
+		if err != nil {
+			panic(err)
+		}
+		packetStamp, _ := strconv.ParseInt(playerRoom.Stamp, 10, 64)
+
 		// log.Printf("Subscriberoomsinfo : %+v\n", data)
 		Roomspopulationcount(data)
-		go Broadcast(data.RoomUuid, []byte(data.DataJson))
+		go Broadcast(data.Roomuuid, []byte(data.Datajson), packetStamp)
 
 	}
 
@@ -150,7 +177,7 @@ func Subscribesync() {
 
 	_, err := Redispubsub.Receive()
 	if err != nil {
-		log.Printf("Subscribesync err : %+v\n", err)
+		// log.Printf("Subscribesync err : %+v\n", err)
 		return
 	}
 	ch := Redispubsub.Channel()
@@ -165,6 +192,7 @@ func Subscribesync() {
 		switch syncData.Synctype {
 		case "blockSync":
 			go Queryblocklist()
+			go Queryblockiplist()
 		case "roomsInfoSync":
 			go Syncroominfo(syncData.Data)
 		case "apiKeySync":
@@ -187,6 +215,10 @@ func Subscribesync() {
 			go Updatefriendstate(syncData.Data)
 		case "globalMessageSync":
 			go Queryglobalmessage()
+		case "clearUserMsg":
+			go Sendclearusermsg(syncData.Data)
+		case "memberCountSync":
+			go Membercountbroadcast(syncData.Data)
 		}
 	}
 }
@@ -202,7 +234,7 @@ func Subscribesudoresult() {
 
 	_, err := Redispubsub.Receive()
 	if err != nil {
-		log.Printf("Subscribesudoresult err : %+v\n", err)
+		// log.Printf("Subscribesudoresult err : %+v\n", err)
 		return
 	}
 	ch := Redispubsub.Channel()

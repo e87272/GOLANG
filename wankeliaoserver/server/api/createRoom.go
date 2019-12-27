@@ -52,7 +52,7 @@ func createRoom(w http.ResponseWriter, r *http.Request) {
 		if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
 			os.Mkdir(uploadPath, os.ModePerm)
 		}
-		roomIconLink = strconv.Itoa(thisTime.Year()) + strconv.Itoa(int(thisTime.Month())) + fileName
+		roomIconLink = "/" + strconv.Itoa(thisTime.Year()) + strconv.Itoa(int(thisTime.Month())) + fileName
 		ioutil.WriteFile(uploadPath+fileName, bytes, os.ModePerm)
 	}
 
@@ -63,6 +63,23 @@ func createRoom(w http.ResponseWriter, r *http.Request) {
 		result["message"] = "ROOM_TYPE_ERROR"
 		common.ResponseWithJson(w, http.StatusOK, result)
 		common.Essyserrorlog("API_CREATEROOM_ROOM_TYPE_ERROR", r.Header["Client-Name"][0], nil)
+		return
+	}
+	roomUuid, ok, exception := common.Hierarchytokensearch("api", r.Header["Client-Name"][0], platformUuid, platform)
+
+	if !ok {
+		result["result"] = "err"
+		result["message"] = exception.Message
+		common.ResponseWithJson(w, http.StatusOK, result)
+		common.Essyserrorlog("API_CREATEROOM_ROOM_SEARCH_ERROR", r.Header["Client-Name"][0], err)
+		return
+	}
+
+	if roomUuid != "" {
+		result["result"] = "err"
+		result["message"] = "ROOM_EXIST"
+		common.ResponseWithJson(w, http.StatusOK, result)
+		common.Essyserrorlog("API_CREATEROOM_ROOM_EXIST", r.Header["Client-Name"][0], err)
 		return
 	}
 
@@ -81,13 +98,15 @@ func createRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roomUuid := common.Getid().Hexstring()
+	roomUuid = common.Getid().Hexstring()
 	_, err = database.Exec(
-		"INSERT INTO `"+roomType+"` (roomUuid, roomName, roomIcon, owner) VALUES (?, ?, ?, ?)",
+		"INSERT INTO `"+roomType+"` (roomUuid, roomName, roomIcon, owner, station, ownerPlatformUuid) VALUES (?, ?, ?, ?, ?, ?)",
 		roomUuid,
 		roomName,
 		roomIconLink,
 		userUuid,
+		r.Header["Client-Name"][0],
+		platformUuid,
 	)
 	if err != nil {
 		result["result"] = "err"
@@ -118,7 +137,7 @@ func createRoom(w http.ResponseWriter, r *http.Request) {
 	userListName := roomType + "UserList"
 	uuid := common.Getid().Hexstring()
 	_, err = database.Exec(
-		"INSERT INTO `"+userListName+"` (uuid, roomUuid, userUuid, roleSet) VALUES (?, ?, ?, ?)",
+		"INSERT INTO `"+userListName+"` (uuid, roomUuid, userUuid, roleSet) VALUES (?, ?, ?, ?, ?, ?)",
 		uuid,
 		roomUuid,
 		userUuid,

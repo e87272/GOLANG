@@ -6,22 +6,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/websocket"
-
 	"../../common"
 	"../../database"
 	"../../socket"
 )
 
-func Kickroomuser(connect *websocket.Conn, msg []byte, loginUuid string) error {
+func Kickroomuser(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendKickRoomUser := socket.Cmd_r_kick_room_user{Base_R: socket.Base_R{
 		Cmd:   socket.CMD_R_KICK_ROOM_USER,
 		Stamp: timeUnix,
 	}}
-	userPlatform, _ := common.Clientsuserplatformread(loginUuid)
+	client, _ := common.Clientsread(loginUuid)
+	userPlatform := client.Userplatform
 	userUuid := userPlatform.Useruuid
+	
 
 	var packetKickRoomUser socket.Cmd_c_kick_room_user
 
@@ -29,7 +29,7 @@ func Kickroomuser(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendKickRoomUser.Base_R.Result = "err"
 		sendKickRoomUser.Base_R.Exp = common.Exception("COMMAND_KICKROOMUSER_JSON_ERROR", userUuid, err)
 		sendKickRoomUserJson, _ := json.Marshal(sendKickRoomUser)
-		common.Sendmessage(connect, sendKickRoomUserJson)
+		common.Sendmessage(connCore, sendKickRoomUserJson)
 		return err
 	}
 	sendKickRoomUser.Base_R.Idem = packetKickRoomUser.Base_C.Idem
@@ -39,7 +39,7 @@ func Kickroomuser(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendKickRoomUser.Base_R.Result = "err"
 		sendKickRoomUser.Base_R.Exp = common.Exception("COMMAND_KICKROOMUSER_GUEST", userUuid, nil)
 		sendKickRoomUserJson, _ := json.Marshal(sendKickRoomUser)
-		common.Sendmessage(connect, sendKickRoomUserJson)
+		common.Sendmessage(connCore, sendKickRoomUserJson)
 		return nil
 	}
 
@@ -49,7 +49,7 @@ func Kickroomuser(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendKickRoomUser.Base_R.Result = "err"
 		sendKickRoomUser.Base_R.Exp = common.Exception("COMMAND_KICKROOMUSER_ROOM_UUID_ERROR", userUuid, nil)
 		sendKickRoomUserJson, _ := json.Marshal(sendKickRoomUser)
-		common.Sendmessage(connect, sendKickRoomUserJson)
+		common.Sendmessage(connCore, sendKickRoomUserJson)
 		return nil
 	}
 	if packetKickRoomUser.Payload.Targetuuid != userPlatform.Useruuid && !common.Checkadmin(packetKickRoomUser.Payload.Roomcore.Roomuuid, userPlatform.Useruuid, "KickPartner") {
@@ -57,15 +57,15 @@ func Kickroomuser(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendKickRoomUser.Base_R.Result = "err"
 		sendKickRoomUser.Base_R.Exp = common.Exception("COMMAND_KICKROOMUSER_NOT_ADMIN", userUuid, nil)
 		sendKickRoomUserJson, _ := json.Marshal(sendKickRoomUser)
-		common.Sendmessage(connect, sendKickRoomUserJson)
+		common.Sendmessage(connCore, sendKickRoomUserJson)
 		return nil
 	}
-	if roomInfo.Roomtype == "liveGroup" {
+	if roomInfo.Roomcore.Roomtype == "liveGroup" {
 		//block處理
 		sendKickRoomUser.Base_R.Result = "err"
 		sendKickRoomUser.Base_R.Exp = common.Exception("COMMAND_KICKROOMUSER_ROOM_TYPE_ERROR", userUuid, nil)
 		sendKickRoomUserJson, _ := json.Marshal(sendKickRoomUser)
-		common.Sendmessage(connect, sendKickRoomUserJson)
+		common.Sendmessage(connCore, sendKickRoomUserJson)
 		return nil
 	}
 
@@ -73,16 +73,21 @@ func Kickroomuser(connect *websocket.Conn, msg []byte, loginUuid string) error {
 
 	for _, targetUuid := range targetUserAry {
 
-		userListName := roomInfo.Roomtype + "UserList"
+		userListName := roomInfo.Roomcore.Roomtype + "UserList"
 
 		_, _ = database.Exec(
 			"DELETE FROM `"+userListName+"` WHERE roomUuid = ? and userUuid = ? ",
-			roomInfo.Roomuuid,
+			roomInfo.Roomcore.Roomuuid,
 			targetUuid,
 		)
 
+		//刪除redis資料，下次更新時撈DB
+		common.Deleteredisuserinfo(targetUuid)
+
+		common.Membercount(userListName, roomInfo.Roomcore.Roomuuid, userUuid)
+
 		targetKickRoomUser := socket.Cmd_b_kick_room_user{Base_B: socket.Base_B{Cmd: socket.CMD_B_KICK_ROOM_USER, Stamp: timeUnix}}
-		targetKickRoomUser.Payload = socket.Roomcore{Roomuuid: roomInfo.Roomuuid, Roomtype: roomInfo.Roomtype}
+		targetKickRoomUser.Payload = socket.Roomcore{Roomuuid: roomInfo.Roomcore.Roomuuid, Roomtype: roomInfo.Roomcore.Roomtype}
 		targetKickRoomUserJson, _ := json.Marshal(targetKickRoomUser)
 
 		userMessage := common.Redispubsubuserdata{Useruuid: targetUuid, Datajson: string(targetKickRoomUserJson)}
@@ -100,7 +105,7 @@ func Kickroomuser(connect *websocket.Conn, msg []byte, loginUuid string) error {
 
 	sendKickRoomUser.Base_R.Result = "ok"
 	sendKickRoomUserJson, _ := json.Marshal(sendKickRoomUser)
-	common.Sendmessage(connect, sendKickRoomUserJson)
+	common.Sendmessage(connCore, sendKickRoomUserJson)
 
 	return nil
 }

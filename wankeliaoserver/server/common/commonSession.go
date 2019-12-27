@@ -14,8 +14,8 @@ var globalSessions *Manager
 var provides = make(map[string]Provider)
 
 type Manager struct {
-	cookieName  string     // private cookiename
-	lock        sync.Mutex // protects session
+	cookieName  string      // private cookiename
+	lock        *sync.Mutex // protects session
 	provider    Provider
 	maxLifeTime int64
 }

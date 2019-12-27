@@ -2,27 +2,24 @@ package commandRoom
 
 import (
 	"encoding/json"
-	"log"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/gorilla/websocket"
-
 	"../../common"
-	"../../database"
 	"../../socket"
 )
 
-func Targetaddroombatch(connect *websocket.Conn, msg []byte, loginUuid string) error {
+func Targetaddroombatch(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendTargetAddRoomBatch := socket.Cmd_r_target_add_room_batch{Base_R: socket.Base_R{
 		Cmd:   socket.CMD_R_TARGET_ADD_ROOM_BATCH,
 		Stamp: timeUnix,
 	}}
-	userPlatform, _ := common.Clientsuserplatformread(loginUuid)
+	client, _ := common.Clientsread(loginUuid)
+	userPlatform := client.Userplatform
 	userUuid := userPlatform.Useruuid
+	
 
 	var packetTargetAddRoomBatch socket.Cmd_c_target_add_room_batch
 	err := json.Unmarshal([]byte(msg), &packetTargetAddRoomBatch)
@@ -30,7 +27,7 @@ func Targetaddroombatch(connect *websocket.Conn, msg []byte, loginUuid string) e
 		sendTargetAddRoomBatch.Base_R.Result = "err"
 		sendTargetAddRoomBatch.Base_R.Exp = common.Exception("COMMAND_TARGETADDROOMBATCH_JSON_ERROR", userUuid, err)
 		sendTargetAddRoomBatchJson, _ := json.Marshal(sendTargetAddRoomBatch)
-		common.Sendmessage(connect, sendTargetAddRoomBatchJson)
+		common.Sendmessage(connCore, sendTargetAddRoomBatchJson)
 		return err
 	}
 	sendTargetAddRoomBatch.Base_R.Idem = packetTargetAddRoomBatch.Base_C.Idem
@@ -44,7 +41,7 @@ func Targetaddroombatch(connect *websocket.Conn, msg []byte, loginUuid string) e
 			sendTargetAddRoomBatch.Base_R.Exp = common.Exception("COMMAND_TARGETADDROOMBATCH_NOT_ADMIN", userPlatform.Useruuid, nil)
 			sendTargetAddRoomBatchJson, _ := json.Marshal(sendTargetAddRoomBatch)
 			common.Essyslog(string(sendTargetAddRoomBatchJson), loginUuid, userPlatform.Useruuid)
-			common.Sendmessage(connect, sendTargetAddRoomBatchJson)
+			common.Sendmessage(connCore, sendTargetAddRoomBatchJson)
 			return nil
 		}
 	}
@@ -55,20 +52,8 @@ func Targetaddroombatch(connect *websocket.Conn, msg []byte, loginUuid string) e
 		sendTargetAddRoomBatch.Base_R.Exp = exception
 		sendTargetAddRoomBatchJson, _ := json.Marshal(sendTargetAddRoomBatch)
 		common.Essyslog(string(sendTargetAddRoomBatchJson), loginUuid, userPlatform.Useruuid)
-		common.Sendmessage(connect, sendTargetAddRoomBatchJson)
+		common.Sendmessage(connCore, sendTargetAddRoomBatchJson)
 		return nil
-	}
-
-	vipGroupMap := map[string]string{}
-	vipGroupArray := strings.Split(targetUserInfo.Vipgroup, ",")
-	for _, roomUuid := range vipGroupArray {
-		vipGroupMap[roomUuid] = roomUuid
-	}
-
-	privateGroupMap := map[string]string{}
-	privateGroupArray := strings.Split(targetUserInfo.Privategroup, ",")
-	for _, roomUuid := range privateGroupArray {
-		privateGroupMap[roomUuid] = roomUuid
 	}
 
 	roomCoreList := []socket.Roomcore{}
@@ -82,87 +67,14 @@ func Targetaddroombatch(connect *websocket.Conn, msg []byte, loginUuid string) e
 		}{})
 		sendTargetAddRoomBatch.Payload[key].Roomcore = roomCore
 
-		if roomCore.Roomtype == "privateGroup" {
-
-			_, ok := privateGroupMap[roomCore.Roomuuid]
-			if ok {
-				code := common.Essyserrorlog("COMMAND_TARGETADDROOMBATCH_TARGET_IN_ROOM", userPlatform.Useruuid, nil)
+		switch roomCore.Roomtype {
+		case "privateGroup", "vipGroup":
+			ok, code := common.Roominsertuser(userPlatform, targetUserInfo, roomCore)
+			if !ok {
 				sendTargetAddRoomBatch.Payload[key].Result = code
 				continue
 			}
-
-			userListName := roomCore.Roomtype + "UserList"
-			uuid := common.Getid().Hexstring()
-			_, err = database.Exec(
-				"INSERT INTO `"+userListName+"` (uuid, roomUuid, userUuid, roleSet) VALUES (?, ?, ?, ?)",
-				uuid,
-				roomCore.Roomuuid,
-				targetUserInfo.Userplatform.Useruuid,
-				"",
-			)
-			if err != nil {
-				code := common.Essyserrorlog("COMMAND_TARGETADDROOMBATCH_INSERT_DB_ERROR", userPlatform.Useruuid, nil)
-				sendTargetAddRoomBatch.Payload[key].Result = code
-				continue
-			}
-
-			log.Printf("INSERT INTO `"+userListName+"` (uuid, roomUuid, userUuid, roleSet) VALUES (%+v, %+v, %+v, %+v)",
-				uuid,
-				roomCore.Roomuuid,
-				targetUserInfo.Userplatform.Useruuid,
-				"",
-			)
-
-			privateGroupMap[roomCore.Roomuuid] = roomCore.Roomuuid
-			common.Setredisfirstenterroom(roomCore.Roomuuid+targetUserInfo.Userplatform.Useruuid, userPlatform.Useruuid)
-
-			code := memberCount(userListName, roomCore.Roomuuid, userPlatform.Useruuid)
-			if code != "" {
-				sendTargetAddRoomBatch.Payload[key].Result = code
-				continue
-			}
-
-		} else if roomCore.Roomtype == "vipGroup" {
-
-			_, ok := vipGroupMap[roomCore.Roomuuid]
-			if ok {
-				code := common.Essyserrorlog("COMMAND_TARGETADDROOMBATCH_TARGET_IN_ROOM", userPlatform.Useruuid, nil)
-				sendTargetAddRoomBatch.Payload[key].Result = code
-				continue
-			}
-
-			userListName := roomCore.Roomtype + "UserList"
-			uuid := common.Getid().Hexstring()
-			_, err = database.Exec(
-				"INSERT INTO `"+userListName+"` (uuid, roomUuid, userUuid, roleSet) VALUES (?, ?, ?, ?)",
-				uuid,
-				roomCore.Roomuuid,
-				targetUserInfo.Userplatform.Useruuid,
-				"",
-			)
-			if err != nil {
-				code := common.Essyserrorlog("COMMAND_TARGETADDROOMBATCH_INSERT_DB_ERROR", userPlatform.Useruuid, nil)
-				sendTargetAddRoomBatch.Payload[key].Result = code
-				continue
-			}
-
-			log.Printf("INSERT INTO `"+userListName+"` (uuid, roomUuid, userUuid, roleSet) VALUES (%+v, %+v, %+v, %+v)",
-				uuid,
-				roomCore.Roomuuid,
-				targetUserInfo.Userplatform.Useruuid,
-				"",
-			)
-
-			vipGroupMap[roomCore.Roomuuid] = roomCore.Roomuuid
-			common.Setredisfirstenterroom(roomCore.Roomuuid+targetUserInfo.Userplatform.Useruuid, userPlatform.Useruuid)
-
-			code := memberCount(userListName, roomCore.Roomuuid, userPlatform.Useruuid)
-			if code != "" {
-				sendTargetAddRoomBatch.Payload[key].Result = code
-				continue
-			}
-
-		} else {
+		default:
 			code := common.Essyserrorlog("COMMAND_TARGETADDROOMBATCH_ROOM_TYPE_ERROR", userPlatform.Useruuid, nil)
 			sendTargetAddRoomBatch.Payload[key].Result = code
 			continue
@@ -172,7 +84,7 @@ func Targetaddroombatch(connect *websocket.Conn, msg []byte, loginUuid string) e
 	}
 	sendTargetAddRoomBatch.Base_R.Result = "ok"
 	sendTargetAddRoomBatchJson, _ := json.Marshal(sendTargetAddRoomBatch)
-	common.Sendmessage(connect, sendTargetAddRoomBatchJson)
+	common.Sendmessage(connCore, sendTargetAddRoomBatchJson)
 
 	if len(roomCoreList) > 0 {
 
@@ -201,28 +113,4 @@ func Targetaddroombatch(connect *websocket.Conn, msg []byte, loginUuid string) e
 	}
 
 	return nil
-}
-
-func memberCount(userListName string, roomUuid string, userUuid string) string {
-
-	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
-
-	row := database.QueryRow("SELECT count(*) FROM users RIGHT JOIN "+userListName+" ON users.uuid="+userListName+".userUuid WHERE "+userListName+".roomUuid = ?",
-		roomUuid,
-	)
-	memberCount := 0
-	err := row.Scan(&memberCount)
-	if err != nil {
-		code := common.Essyserrorlog("COMMAND_TARGETADDROOMBATCH_QUERY_MEMBER_ERROR", userUuid, err)
-		return code
-	}
-
-	common.Setredismembercount(roomUuid, memberCount)
-
-	roomCountBroadcast := socket.Cmd_b_room_member_count{Base_B: socket.Base_B{Cmd: socket.CMD_B_ROOM_MEMBER_COUNT, Stamp: timeUnix}}
-	roomCountBroadcast.Payload.Count = memberCount
-	roomCountBroadcast.Payload.Roomuuid = roomUuid
-	roomCountBroadcastJson, _ := json.Marshal(roomCountBroadcast)
-	common.Redispubroomdata(roomUuid, roomCountBroadcastJson)
-	return ""
 }

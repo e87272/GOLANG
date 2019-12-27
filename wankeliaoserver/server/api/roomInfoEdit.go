@@ -23,6 +23,8 @@ func roomInfoEdit(w http.ResponseWriter, r *http.Request) {
 	common.Essyslog(string(rStr), "/emit/roomInfoEdit", r.Header["Client-Name"][0])
 
 	result := map[string]interface{}{}
+	platformUuid := r.FormValue("platformUuid")
+	platform := r.FormValue("platform")
 	roomUuid := r.FormValue("roomUuid")
 	roomType := r.FormValue("roomType")
 	roomName := r.FormValue("roomName")
@@ -51,7 +53,7 @@ func roomInfoEdit(w http.ResponseWriter, r *http.Request) {
 		if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
 			os.Mkdir(uploadPath, os.ModePerm)
 		}
-		roomIconLink = strconv.Itoa(thisTime.Year()) + strconv.Itoa(int(thisTime.Month())) + fileName
+		roomIconLink = "/" + strconv.Itoa(thisTime.Year()) + strconv.Itoa(int(thisTime.Month())) + fileName
 		ioutil.WriteFile(uploadPath+fileName, bytes, os.ModePerm)
 	}
 
@@ -65,10 +67,25 @@ func roomInfoEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var ownerUuid string
+	row := database.QueryRow(
+		"select uuid from users where platformUuid = ? and platform = ?",
+		platformUuid,
+		platform,
+	)
+	err = row.Scan(&ownerUuid)
+	if err != nil {
+		result["result"] = "err"
+		result["message"] = "SELECT_USER_ERROR"
+		common.ResponseWithJson(w, http.StatusOK, result)
+		common.Essyserrorlog("API_ROOMINFOEDIT_SELECT_USER_ERROR", r.Header["Client-Name"][0], err)
+		return
+	}
+
 	if roomIconLink != "" {
-		_, err = database.Exec("UPDATE "+roomType+" SET roomName = ? , roomIcon = ? where roomUuid = ?", roomName, roomIconLink, roomUuid)
+		_, err = database.Exec("UPDATE "+roomType+" SET roomName = ? , roomIcon = ? , owner = ? where roomUuid = ?", roomName, roomIconLink, ownerUuid, roomUuid)
 	} else {
-		_, err = database.Exec("UPDATE "+roomType+" SET roomName = ? where roomUuid = ?", roomName, roomUuid)
+		_, err = database.Exec("UPDATE "+roomType+" SET roomName = ? , owner = ? where roomUuid = ?", roomName, ownerUuid, roomUuid)
 	}
 	if err != nil {
 		result["result"] = "err"

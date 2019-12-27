@@ -8,18 +8,19 @@ import (
 	"../common"
 	"../database"
 	"../socket"
-	"github.com/gorilla/websocket"
 )
 
-func Getfriendlist(connect *websocket.Conn, msg []byte, loginUuid string) error {
+func Getfriendlist(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendFriendList := socket.Cmd_r_get_friend_list{Base_R: socket.Base_R{
 		Cmd:   socket.CMD_R_GET_FRIEND_LIST,
 		Stamp: timeUnix,
 	}}
-	userPlatform, _ := common.Clientsuserplatformread(loginUuid)
+	client, _ := common.Clientsread(loginUuid)
+	userPlatform := client.Userplatform
 	userUuid := userPlatform.Useruuid
+	
 
 	var packetFriendList socket.Cmd_c_get_friend_list
 	err := json.Unmarshal([]byte(msg), &packetFriendList)
@@ -27,7 +28,7 @@ func Getfriendlist(connect *websocket.Conn, msg []byte, loginUuid string) error 
 		sendFriendList.Base_R.Result = "err"
 		sendFriendList.Base_R.Exp = common.Exception("COMMAND_GETFRIENDLIST_JSON_ERROR", userUuid, err)
 		sendFriendListJson, _ := json.Marshal(sendFriendList)
-		common.Sendmessage(connect, sendFriendListJson)
+		common.Sendmessage(connCore, sendFriendListJson)
 		return err
 	}
 	sendFriendList.Base_R.Idem = packetFriendList.Base_C.Idem
@@ -37,7 +38,7 @@ func Getfriendlist(connect *websocket.Conn, msg []byte, loginUuid string) error 
 		sendFriendList.Base_R.Result = "err"
 		sendFriendList.Base_R.Exp = common.Exception("COMMAND_GETFRIENDLIST_GUEST", userUuid, nil)
 		sendFriendListJson, _ := json.Marshal(sendFriendList)
-		common.Sendmessage(connect, sendFriendListJson)
+		common.Sendmessage(connCore, sendFriendListJson)
 		return nil
 	}
 
@@ -100,7 +101,7 @@ func Getfriendlist(connect *websocket.Conn, msg []byte, loginUuid string) error 
 	sendFriendList.Payload.Invitefromlist = inviteFromList
 	sendFriendList.Payload.Invitetolist = inviteToList
 	sendFriendListJson, _ := json.Marshal(sendFriendList)
-	common.Sendmessage(connect, sendFriendListJson)
+	common.Sendmessage(connCore, sendFriendListJson)
 
 	return nil
 }

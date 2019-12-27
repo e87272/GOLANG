@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"sync"
+
 	"math/rand"
 	"net/http"
 	"os"
@@ -24,8 +26,6 @@ import (
 func main() {
 
 	rand.Seed(time.Now().Unix())
-
-	log.SetFlags(log.LstdFlags)
 
 	// log.Printf("NumCPU : %v\n", runtime.NumCPU())
 
@@ -58,7 +58,9 @@ func main() {
 	log.Printf("Elasticsearch version %s\n", esversion)
 
 	// common.Esdelete(os.Getenv("sysErrorLog"))
+	// common.Esdelete(os.Getenv("clientsLog"))
 	common.Essyserrorinit(os.Getenv("sysLog"))
+	common.Essyserrorinit(os.Getenv("clientsLog"))
 
 	// common.Esdelete(os.Getenv("sysErrorLog"))
 	common.Essyserrorinit(os.Getenv("sysErrorLog"))
@@ -78,8 +80,8 @@ func main() {
 
 	// common.Esdelete("roomdirtywordhistory")
 	// common.Esdelete("sidetextdirtywordhistory")
-	common.Esdirtywordhistoryinit("roomdirtywordhistory")
-	common.Essidetextdirtywordhistoryinit("sidetextdirtywordhistory")
+	common.Eschatinit("roomdirtywordhistory")
+	common.Eschatinit("sidetextdirtywordhistory")
 
 	common.Redisclient = redis.NewClient(&redis.Options{
 		Addr:     os.Getenv("redisHost"),
@@ -96,6 +98,7 @@ func main() {
 
 	database.Linkdb()
 	common.Queryblocklist()
+	common.Queryblockiplist()
 	common.Querydirtyword()
 	common.Queryfunctionmanagement()
 	common.Queryglobalmessage()
@@ -132,8 +135,22 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 	connect, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		common.Essyserrorlog("MAIN_ECHOHANDLER_ERROR", loginUuid, err)
+		if connect != nil {
+			connect.Close()
+		}
 		return
 	}
+
+	// log.Printf("http.Request Header X-Forwarded-For : %+v\n", r.Header["X-Forwarded-For"])
+	// log.Printf("http.Request Header : %+v\n", r.Header)
+	// log.Printf("http.Request Header Connection : %+v\n", r.Header["Connection"])
+	//不安全可能被客端竄改還需修改
+	if len(r.Header["X-Forwarded-For"]) == 0 {
+		common.Essyserrorlog("MAIN_ECHOHANDLER_IP_ERROR", loginUuid, err)
+		connect.Close()
+		return
+	}
+	common.Iplistinsert(loginUuid, r.Header["X-Forwarded-For"][0])
 
 	defer func() {
 		// log.Printf("defer : %+v\n", loginUuid)
@@ -145,32 +162,24 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 
 		// log.Printf("room : %+v - %s\n", room, loginUuid)
 
-		for _, roomInfo := range room {
+		for _, roomCore := range room {
 
 			// log.Printf("roominfo : %+v\n", roominfo)
 
-			common.Roomsclientdelete(roomInfo.Roomuuid, loginUuid)
+			common.Roomsclientdelete(roomCore.Roomuuid, loginUuid)
 			// log.Printf("delete : " + loginUuid)
 
-			if len(common.Roomsread(roomInfo.Roomuuid)) == 0 {
-				common.Roomsdelete(roomInfo.Roomuuid)
-				common.Roomsinfodelete(roomInfo.Roomuuid)
+			if len(common.Roomsread(roomCore.Roomuuid)) == 0 {
+				common.Roomsdelete(roomCore.Roomuuid)
+				common.Roomsinfodelete(roomCore.Roomuuid)
 			}
 
 			// 離開為單一不用通知
-			// historyUuid := common.Getid().Hexstring()
-			// timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
-			// chatMessage := socket.Chatmessage{Historyuuid: historyUuid, From: userPlatform, Stamp: timeUnix, Message: "exit room", Style: "sys"}
-			// roomBroadcast := socket.Cmd_b_player_room{Base_B: socket.Base_B{Cmd: socket.CMD_B_PLAYER_EXIT_ROOM, Stamp: timeUnix}}
-			// roomBroadcast.Payload.Chatmessage = chatMessage
-			// roomBroadcast.Payload.Chattarget = roomInfo.Roomuuid
-			// roomBroadcastJson, _ := json.Marshal(roomBroadcast)
-
-			// common.Redispubroomsinfo(roomInfo.Roomuuid, roomBroadcastJson)
 
 		}
 
 		common.Clientsdelete(loginUuid)
+		common.Iplistdelete(loginUuid)
 		clientConnect, _ := common.Clientsconnectread(userPlatform.Useruuid)
 		if len(clientConnect) == 1 {
 			common.Clientsconnectdelete(userPlatform.Useruuid)
@@ -184,8 +193,10 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 		// log.Printf("connect : close - %s \n", loginUuid)
 	}()
 
+	connCore := common.Conncore{Conn: connect, Connmutex: new(sync.Mutex)}
+
 	for {
-		err = receivePacketHandle(connect, loginUuid)
+		err = receivePacketHandle(connCore, loginUuid)
 		if err != nil {
 			// log.Println("echoHandler write:", err)
 			break
@@ -194,7 +205,7 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
-	//log.Println(r.URL)
+	// log.Println(r.URL)
 	if r.URL.Path != "/" {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -206,13 +217,14 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "../client/healthCheck.html")
 }
 
-func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
+func receivePacketHandle(connCore common.Conncore, loginUuid string) error {
 
-	// log.Printf("connect : %+v\n", common.Clientsread(connect))
+	// log.Printf("connect RemoteAddr: %+v\n", connect.RemoteAddr().String())
+	// log.Printf("connect LocalAddr: %+v\n", connect.LocalAddr().String())
 
 	//ReadMessage只能讀一次 猜測是因為讀取指標的問題
 
-	_, msg, err := connect.ReadMessage()
+	_, msg, err := connCore.Conn.ReadMessage()
 	if err != nil {
 		// log.Printf("connect : %+v\n", err)
 		return err
@@ -225,7 +237,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 	var mapResult map[string]interface{}
 	//使用 json.Unmarshal(data []byte, v interface{})进行转换,返回 error 信息
 	if err := json.Unmarshal([]byte(msg), &mapResult); err != nil {
-		//log.Println("receivePacketHandle Unmarshal:", err)
+		// log.Println("receivePacketHandle Unmarshal:", err)
 		return err
 	}
 
@@ -239,7 +251,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 	switch mapResult["cmd"] {
 	case socket.CMD_C_TOKEN_CHANGE:
 		// log.Printf("CMD_C_TOKEN_CHANGE : " + uuid)
-		err = command.Tokenchange(connect, msg, loginUuid)
+		err = command.Tokenchange(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -247,7 +259,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_PLAYER_LOGOUT:
 
-		err = command.Playerlogout(connect, msg, loginUuid)
+		err = command.Playerlogout(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -256,7 +268,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_GET_MEMBER_LIST:
 
-		err = commandRoom.Getmemberlist(connect, msg, loginUuid)
+		err = commandRoom.Getmemberlist(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -265,7 +277,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_PLAYER_EXIT_ROOM:
 
-		err = commandRoom.Playerexitroom(connect, msg, loginUuid)
+		err = commandRoom.Playerexitroom(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -274,7 +286,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_PLAYER_ENTER_ROOM:
 
-		err = commandRoom.Playerenterroom(connect, msg, loginUuid)
+		err = commandRoom.Playerenterroom(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -283,7 +295,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_ROOM_INFO_EDIT:
 
-		err = commandRoom.Roominfoedit(connect, msg, loginUuid)
+		err = commandRoom.Roominfoedit(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -292,7 +304,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_GET_CHAT_HISTORY:
 
-		err = commandRoom.Getroomhistory(connect, msg, loginUuid)
+		err = commandRoom.Getroomhistory(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -301,7 +313,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_FRIEND_INVITE:
 
-		err = command.Friendinvite(connect, msg, loginUuid)
+		err = command.Friendinvite(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -310,7 +322,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_GET_FRIEND_LIST:
 
-		err = command.Getfriendlist(connect, msg, loginUuid)
+		err = command.Getfriendlist(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -319,7 +331,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_CHATBLOCK:
 
-		err = commandRoom.Blockroomchat(connect, msg, loginUuid)
+		err = commandRoom.Blockroomchat(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -328,7 +340,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_PING:
 
-		err = command.Healthcheck(connect, msg)
+		err = command.Healthcheck(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -337,7 +349,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_PROCLAMATION:
 
-		err = command.Proclamationsearch(connect, msg)
+		err = command.Proclamationsearch(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -346,7 +358,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_FRIEND_DELETE:
 
-		err = command.Frienddelete(connect, msg, loginUuid)
+		err = command.Frienddelete(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -355,7 +367,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_SIDETEXT_DELETE:
 
-		err = command.Sidetextdelete(connect, msg, loginUuid)
+		err = command.Sidetextdelete(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -364,7 +376,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_GET_SIDETEXT_HISTORY:
 
-		err = command.Getsidetexthistory(connect, msg, loginUuid)
+		err = command.Getsidetexthistory(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -373,7 +385,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_GET_NEW_SIDETEXT:
 
-		err = command.Getnewsidetext(connect, msg, loginUuid)
+		err = command.Getnewsidetext(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -382,7 +394,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_GET_FUNC_MANAGEMENT:
 
-		err = command.Getfuncmanagement(connect, msg, loginUuid)
+		err = command.Getfuncmanagement(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -391,7 +403,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_TARGET_ADD_ROOM_BATCH:
 
-		err = commandRoom.Targetaddroombatch(connect, msg, loginUuid)
+		err = commandRoom.Targetaddroombatch(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -400,7 +412,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_PLAYER_ENTER_ROOM_BATCH:
 
-		err = commandRoom.Playerenterroombatch(connect, msg, loginUuid)
+		err = commandRoom.Playerenterroombatch(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -409,7 +421,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_MESSAGE_SEEN:
 
-		err = command.Messageseen(connect, msg, loginUuid)
+		err = command.Messageseen(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -418,7 +430,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_KICK_ROOM_USER:
 
-		err = commandRoom.Kickroomuser(connect, msg, loginUuid)
+		err = commandRoom.Kickroomuser(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -427,7 +439,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_CREATE_PRIVATE_ROOM:
 
-		err = commandRoom.Createprivateroom(connect, msg, loginUuid)
+		err = commandRoom.Createprivateroom(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -436,7 +448,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_PLAYER_SEND_MSG:
 
-		err = commandRoom.Playersendmsg(connect, msg, loginUuid)
+		err = commandRoom.Playersendmsg(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -445,7 +457,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_PLAYER_SIDETEXT:
 
-		err = command.Sidetextsend(connect, msg, loginUuid)
+		err = command.Sidetextsend(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -454,7 +466,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_PLAYER_SEND_SHELL:
 
-		err = command.Playersendshell(connect, msg, loginUuid)
+		err = command.Playersendshell(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -463,7 +475,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_DIS_MISS_ROOM:
 
-		err = commandRoom.Dismissroom(connect, msg, loginUuid)
+		err = commandRoom.Dismissroom(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -472,7 +484,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_ROOM_ADMIN_ADD:
 
-		err = commandRoom.Roomadminadd(connect, msg, loginUuid)
+		err = commandRoom.Roomadminadd(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -480,7 +492,7 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_ROOM_ADMIN_REMOVE:
 
-		err = commandRoom.Roomadminremove(connect, msg, loginUuid)
+		err = commandRoom.Roomadminremove(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -488,7 +500,31 @@ func receivePacketHandle(connect *websocket.Conn, loginUuid string) error {
 		break
 	case socket.CMD_C_GET_LANG_LIST:
 
-		err = command.Getlanglist(connect, msg, loginUuid)
+		err = command.Getlanglist(connCore, msg, loginUuid)
+
+		if err != nil {
+			return err
+		}
+		break
+	case socket.CMD_C_CLEAR_USER_MSG:
+
+		err = commandRoom.Clearusermsg(connCore, msg, loginUuid)
+
+		if err != nil {
+			return err
+		}
+		break
+	case socket.CMD_C_FORWARD_MSG:
+
+		err = commandRoom.Playersendforwardmsg(connCore, msg, loginUuid)
+
+		if err != nil {
+			return err
+		}
+		break
+	case socket.CMD_C_SIDETEXT_FORWARD_MSG:
+
+		err = command.Sidetextforwardmsg(connCore, msg, loginUuid)
 
 		if err != nil {
 			return err
@@ -528,14 +564,15 @@ func loadLang(lang string) {
 
 	langFile, err := ioutil.ReadFile("config/" + lang + ".json")
 	if err != nil {
-		log.Fatal("找不到host.json")
+		log.Printf("找不到host.json")
+		return
 	}
 
 	langMap := make(map[string]string)
 
 	err = json.Unmarshal(langFile, &langMap)
 	if err != nil {
-		// log.Printf("configHost err: %v\n", err)
+		log.Printf("configHost err: %v\n", err)
 		return
 	}
 

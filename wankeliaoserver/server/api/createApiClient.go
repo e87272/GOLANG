@@ -24,7 +24,7 @@ func createApiClient(w http.ResponseWriter, r *http.Request) {
 	clientName := r.FormValue("clientName")
 
 	apiKeyByte := [96]byte{}
-	for i := 0; i < 96; i++ {
+	for i := 0; i < len(apiKeyByte); i++ {
 		apiKeyByte[i] = byte(rand.Intn(256))
 	}
 	apiKey := base64.URLEncoding.EncodeToString(apiKeyByte[:])

@@ -7,22 +7,23 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/olivere/elastic"
 
 	"../common"
 	"../socket"
 )
 
-func Getnewsidetext(connect *websocket.Conn, msg []byte, loginUuid string) error {
+func Getnewsidetext(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendNewSideText := socket.Cmd_r_get_new_side_text{Base_R: socket.Base_R{
 		Cmd:   socket.CMD_R_GET_NEW_SIDETEXT,
 		Stamp: timeUnix,
 	}}
-	userPlatform, _ := common.Clientsuserplatformread(loginUuid)
+	client, _ := common.Clientsread(loginUuid)
+	userPlatform := client.Userplatform
 	userUuid := userPlatform.Useruuid
+	
 
 	var packetNewSidetext socket.Cmd_c_get_new_side_text
 
@@ -30,7 +31,7 @@ func Getnewsidetext(connect *websocket.Conn, msg []byte, loginUuid string) error
 		sendNewSideText.Base_R.Result = "err"
 		sendNewSideText.Base_R.Exp = common.Exception("COMMAND_GETNEWSIDETEXT_JSON_ERROR", userUuid, err)
 		sendNewSideTextJson, _ := json.Marshal(sendNewSideText)
-		common.Sendmessage(connect, sendNewSideTextJson)
+		common.Sendmessage(connCore, sendNewSideTextJson)
 		return err
 	}
 	sendNewSideText.Base_R.Idem = packetNewSidetext.Base_C.Idem
@@ -40,7 +41,7 @@ func Getnewsidetext(connect *websocket.Conn, msg []byte, loginUuid string) error
 		sendNewSideText.Base_R.Result = "err"
 		sendNewSideText.Base_R.Exp = common.Exception("COMMAND_GETNEWSIDETEXT_GUEST", userUuid, nil)
 		sendNewSideTextJson, _ := json.Marshal(sendNewSideText)
-		common.Sendmessage(connect, sendNewSideTextJson)
+		common.Sendmessage(connCore, sendNewSideTextJson)
 		return nil
 	}
 
@@ -57,34 +58,38 @@ func Getnewsidetext(connect *websocket.Conn, msg []byte, loginUuid string) error
 			oldLastMessageUuid = common.Getid().Hexstring()
 		}
 		boolQ := elastic.NewBoolQuery()
-		boolQ.Must(elastic.NewMatchQuery("chatTarget", sideText.Sidetextuuid))
+		boolQ.Filter(elastic.NewMatchQuery("chatTarget", sideText.Sidetextuuid))
 		boolQ.Filter(elastic.NewRangeQuery("historyUuid").Gt(oldLastMessageUuid))
 		searchResult, err := common.Elasticclient.Search(os.Getenv("sideText")).Query(boolQ).Sort("historyUuid", false).Do(context.Background())
 		if err != nil {
 			sendNewSideText.Base_R.Result = "err"
 			sendNewSideText.Base_R.Exp = common.Exception("COMMAND_GETNEWSIDETEXT_SEARCH_ERROR", userUuid, err)
 			sendNewSideTextJson, _ := json.Marshal(sendNewSideText)
-			common.Sendmessage(connect, sendNewSideTextJson)
+			common.Sendmessage(connCore, sendNewSideTextJson)
 			return nil
 		}
 
 		var newSidetext socket.Newsidetext
 		newSidetext.Targetuserplatform = sideText.Userplatform
 		newSidetext.Message = []socket.Chatmessage{}
-		newSidetext.Lastmessage = common.Getredissidetextlastmessage(sideText.Sidetextuuid)
+		newSidetext.Lastmessage = common.Hierarchysidetextlastmessage(loginUuid, userUuid, sideText.Sidetextuuid)
 
 		for _, hit := range searchResult.Hits.Hits {
 			var chatHistory common.Chathistory
 			_ = json.Unmarshal(hit.Source, &chatHistory)
 
-			var chatMessage socket.Chatmessage
-			chatMessage.Historyuuid = chatHistory.Historyuuid
-			chatMessage.From.Useruuid = chatHistory.Myuuid
-			chatMessage.From.Platformuuid = chatHistory.Myplatformuuid
-			chatMessage.From.Platform = chatHistory.Myplatform
-			chatMessage.Stamp = chatHistory.Stamp
-			chatMessage.Message = chatHistory.Message
-			chatMessage.Style = chatHistory.Style
+			chatMessage := socket.Chatmessage{
+				Historyuuid: chatHistory.Historyuuid,
+				From: socket.Userplatform{
+					Useruuid:     chatHistory.Myuuid,
+					Platformuuid: chatHistory.Myplatformuuid,
+					Platform:     chatHistory.Myplatform,
+				},
+				Stamp:   chatHistory.Stamp,
+				Message: chatHistory.Message,
+				Style:   chatHistory.Style,
+				Ip:      chatHistory.Ip,
+			}
 			newSidetext.Message = append(newSidetext.Message, chatMessage)
 		}
 
@@ -94,7 +99,7 @@ func Getnewsidetext(connect *websocket.Conn, msg []byte, loginUuid string) error
 	sendNewSideText.Base_R.Result = "ok"
 	sendNewSideText.Payload.Newsidetextlist = newSidetextList
 	sendNewSideTextJson, _ := json.Marshal(sendNewSideText)
-	common.Sendmessage(connect, sendNewSideTextJson)
+	common.Sendmessage(connCore, sendNewSideTextJson)
 
 	return nil
 }

@@ -1,7 +1,7 @@
 package common
 
 import (
-	"log"
+	
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -17,7 +17,7 @@ func Querydirtyword() {
 	)
 
 	if err != nil {
-		log.Printf("Querydirtyword err : %+v\n", err)
+		// log.Printf("Querydirtyword err : %+v\n", err)
 	}
 	var dirtyWord string
 	var dirtyWordUuid string

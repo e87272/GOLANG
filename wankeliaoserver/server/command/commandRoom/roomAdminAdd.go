@@ -8,18 +8,19 @@ import (
 	"../../common"
 	"../../database"
 	"../../socket"
-	"github.com/gorilla/websocket"
 )
 
-func Roomadminadd(connect *websocket.Conn, msg []byte, loginUuid string) error {
+func Roomadminadd(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendRoomAdminAdd := socket.Cmd_r_room_admin_add{Base_R: socket.Base_R{
 		Cmd:   socket.CMD_R_ROOM_ADMIN_ADD,
 		Stamp: timeUnix,
 	}}
-	userPlatform, _ := common.Clientsuserplatformread(loginUuid)
+	client, _ := common.Clientsread(loginUuid)
+	userPlatform := client.Userplatform
 	userUuid := userPlatform.Useruuid
+	
 
 	var packetRoomAdminAdd socket.Cmd_c_room_admin_add
 
@@ -27,7 +28,7 @@ func Roomadminadd(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendRoomAdminAdd.Base_R.Result = "err"
 		sendRoomAdminAdd.Base_R.Exp = common.Exception("COMMAND_ROOMADMINADD_JSON_ERROR", userUuid, err)
 		sendRoomAdminAddJson, _ := json.Marshal(sendRoomAdminAdd)
-		common.Sendmessage(connect, sendRoomAdminAddJson)
+		common.Sendmessage(connCore, sendRoomAdminAddJson)
 		return err
 	}
 	sendRoomAdminAdd.Base_R.Idem = packetRoomAdminAdd.Base_C.Idem
@@ -37,7 +38,7 @@ func Roomadminadd(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendRoomAdminAdd.Base_R.Result = "err"
 		sendRoomAdminAdd.Base_R.Exp = common.Exception("COMMAND_ROOMADMINADD_GUEST", userUuid, nil)
 		sendRoomAdminAddJson, _ := json.Marshal(sendRoomAdminAdd)
-		common.Sendmessage(connect, sendRoomAdminAddJson)
+		common.Sendmessage(connCore, sendRoomAdminAddJson)
 		return nil
 	}
 
@@ -47,18 +48,18 @@ func Roomadminadd(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendRoomAdminAdd.Base_R.Result = "err"
 		sendRoomAdminAdd.Base_R.Exp = common.Exception("COMMAND_ROOMADMINADD_ROOMUUID_ERROR", userUuid, nil)
 		sendRoomAdminAddJson, _ := json.Marshal(sendRoomAdminAdd)
-		common.Sendmessage(connect, sendRoomAdminAddJson)
+		common.Sendmessage(connCore, sendRoomAdminAddJson)
 		return nil
 	}
 	// log.Printf("ROOMADMINADD roomInfo : %+v\n", roomInfo)
 
-	if !common.Checkadmin(roomInfo.Roomuuid, userPlatform.Useruuid, "AddAdmin") {
+	if !common.Checkadmin(roomInfo.Roomcore.Roomuuid, userPlatform.Useruuid, "AddAdmin") {
 		//block處理
 		sendRoomAdminAdd.Base_R.Result = "err"
 		sendRoomAdminAdd.Base_R.Exp = common.Exception("COMMAND_ROOMADMINADD_NOT_ADMIN", userUuid, nil)
 		// log.Printf("sendRoomAdminAdd : %+v\n", sendRoomAdminAdd)
 		sendRoomAdminAddJson, _ := json.Marshal(sendRoomAdminAdd)
-		common.Sendmessage(connect, sendRoomAdminAddJson)
+		common.Sendmessage(connCore, sendRoomAdminAddJson)
 		return nil
 	}
 
@@ -69,7 +70,7 @@ func Roomadminadd(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendRoomAdminAdd.Base_R.Result = "err"
 		sendRoomAdminAdd.Base_R.Exp = exception
 		sendRoomAdminAddJson, _ := json.Marshal(sendRoomAdminAdd)
-		common.Sendmessage(connect, sendRoomAdminAddJson)
+		common.Sendmessage(connCore, sendRoomAdminAddJson)
 		return nil
 	}
 
@@ -81,23 +82,23 @@ func Roomadminadd(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendRoomAdminAdd.Base_R.Result = "err"
 		sendRoomAdminAdd.Base_R.Exp = common.Exception("COMMAND_ROOMADMINADD_SELECT_ROLE_ERROR", userUuid, nil)
 		sendRoomAdminAddJson, _ := json.Marshal(sendRoomAdminAdd)
-		common.Sendmessage(connect, sendRoomAdminAddJson)
+		common.Sendmessage(connCore, sendRoomAdminAddJson)
 		return nil
 	}
 
 	var targetRoleSet string
-	userListName := roomInfo.Roomtype + "UserList"
-	row = database.QueryRow("SELECT roleSet FROM "+userListName+" where roomUuid = ? and userUuid = ?", roomInfo.Roomuuid, targetUser.Userplatform.Useruuid)
+	userListName := roomInfo.Roomcore.Roomtype + "UserList"
+	row = database.QueryRow("SELECT roleSet FROM "+userListName+" where roomUuid = ? and userUuid = ?", roomInfo.Roomcore.Roomuuid, targetUser.Userplatform.Useruuid)
 	err = row.Scan(&targetRoleSet)
 	if err == nil {
 		targetRoleSet = targetRoleSet + "," + roleUuid
 
-		_, err = database.Exec("UPDATE "+userListName+" SET roleSet = ? where roomUuid = ? and userUuid = ?", targetRoleSet, roomInfo.Roomuuid, targetUser.Userplatform.Useruuid)
+		_, err = database.Exec("UPDATE "+userListName+" SET roleSet = ? where roomUuid = ? and userUuid = ?", targetRoleSet, roomInfo.Roomcore.Roomuuid, targetUser.Userplatform.Useruuid)
 		if err != nil {
 			sendRoomAdminAdd.Base_R.Result = "err"
 			sendRoomAdminAdd.Base_R.Exp = common.Exception("COMMAND_ROOMADMINADD_UPDATE_ROLE_ERROR", userUuid, nil)
 			sendRoomAdminAddJson, _ := json.Marshal(sendRoomAdminAdd)
-			common.Sendmessage(connect, sendRoomAdminAddJson)
+			common.Sendmessage(connCore, sendRoomAdminAddJson)
 			return nil
 		}
 
@@ -106,7 +107,7 @@ func Roomadminadd(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		_, err = database.Exec(
 			"INSERT INTO `"+userListName+"` (uuid, roomUuid, userUuid, roleSet) VALUES (?, ?, ?, ?)",
 			uuid,
-			roomInfo.Roomuuid,
+			roomInfo.Roomcore.Roomuuid,
 			userUuid,
 			roleUuid,
 		)
@@ -114,7 +115,7 @@ func Roomadminadd(connect *websocket.Conn, msg []byte, loginUuid string) error {
 			sendRoomAdminAdd.Base_R.Result = "err"
 			sendRoomAdminAdd.Base_R.Exp = common.Exception("COMMAND_ROOMADMINADD_INSERT_ROLE_ERROR", userUuid, nil)
 			sendRoomAdminAddJson, _ := json.Marshal(sendRoomAdminAdd)
-			common.Sendmessage(connect, sendRoomAdminAddJson)
+			common.Sendmessage(connCore, sendRoomAdminAddJson)
 			return nil
 		}
 	} else if err != nil {
@@ -122,20 +123,20 @@ func Roomadminadd(connect *websocket.Conn, msg []byte, loginUuid string) error {
 		sendRoomAdminAdd.Base_R.Result = "err"
 		sendRoomAdminAdd.Base_R.Exp = common.Exception("COMMAND_ROOMADMINADD_SELECT_ROLE_ERROR", userUuid, nil)
 		sendRoomAdminAddJson, _ := json.Marshal(sendRoomAdminAdd)
-		common.Sendmessage(connect, sendRoomAdminAddJson)
+		common.Sendmessage(connCore, sendRoomAdminAddJson)
 		return nil
 	}
 
 	sendRoomAdminAdd.Base_R.Result = "ok"
 	sendRoomAdminAddJson, _ := json.Marshal(sendRoomAdminAdd)
-	common.Sendmessage(connect, sendRoomAdminAddJson)
+	common.Sendmessage(connCore, sendRoomAdminAddJson)
 
-	common.Queryroominfo(userUuid, roomInfo.Roomtype, roomInfo.Roomuuid)
+	common.Queryroominfo(userUuid, roomInfo.Roomcore.Roomtype, roomInfo.Roomcore.Roomuuid)
 
 	//更新列表
 	sendRoomInfoBroadcast := map[string]string{}
-	sendRoomInfoBroadcast["roomType"] = roomInfo.Roomtype
-	sendRoomInfoBroadcast["roomUuid"] = roomInfo.Roomuuid
+	sendRoomInfoBroadcast["roomType"] = roomInfo.Roomcore.Roomtype
+	sendRoomInfoBroadcast["roomUuid"] = roomInfo.Roomcore.Roomuuid
 	sendRoomInfoBroadcastJson, _ := json.Marshal(sendRoomInfoBroadcast)
 
 	pubData := common.Syncdata{Synctype: "roomsInfoSync", Data: string(sendRoomInfoBroadcastJson)}

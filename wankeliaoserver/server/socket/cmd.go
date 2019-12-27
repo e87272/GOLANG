@@ -59,6 +59,12 @@ const CMD_C_ROOM_ADMIN_REMOVE string = "92"
 
 const CMD_C_GET_LANG_LIST string = "96"
 
+const CMD_C_CLEAR_USER_MSG string = "100"
+
+const CMD_C_FORWARD_MSG string = "104"
+
+const CMD_C_SIDETEXT_FORWARD_MSG string = "106"
+
 /* Message(-伺服器): type 必定為奇數 回覆 */
 
 const CMD_R_TOKEN_CHANGE string = "3"
@@ -119,6 +125,12 @@ const CMD_R_ROOM_ADMIN_REMOVE string = "93"
 
 const CMD_R_GET_LANG_LIST string = "97"
 
+const CMD_R_CLEAR_USER_MSG string = "101"
+
+const CMD_R_FORWARD_MSG string = "105"
+
+const CMD_R_SIDETEXT_FORWARD_MSG string = "107"
+
 /* Message(-伺服器): type 必定為奇數 廣播 */
 
 const CMD_B_PLAYER_ENTER_ROOM string = "13"
@@ -158,3 +170,5 @@ const CMD_B_FRIEND_DELETE string = "89"
 const CMD_B_GLOBAL_MESSAGE string = "95"
 
 const CMD_B_ROOM_MEMBER_COUNT string = "99"
+
+const CMD_B_CLEAR_USER_MSG string = "103"

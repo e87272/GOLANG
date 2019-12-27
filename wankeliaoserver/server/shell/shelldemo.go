@@ -2,7 +2,7 @@ package shell
 
 import (
 	"encoding/json"
-	"log"
+
 	"net/http"
 	"net/url"
 	"os"
@@ -14,11 +14,9 @@ import (
 	"../common"
 	"../database"
 	"../socket"
-
-	"github.com/gorilla/websocket"
 )
 
-func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.Userplatform, packetSendShell socket.Cmd_c_player_send_shell, timeUnix string) error {
+func shelldemo(shellCmd []string, connCore common.Conncore, userPlatform socket.Userplatform, packetSendShell socket.Cmd_c_player_send_shell, timeUnix string) error {
 
 	switch shellCmd[1] {
 
@@ -27,14 +25,20 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if len(shellCmd) < 2 {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_PARAMETER_ERROR", userPlatform.Useruuid, nil)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return nil
 		}
 
 		historyUuid := common.Getid().Hexstring()
 		timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
-		// roominfo := common.Roomsinforead(packetSendShell.Payload.Roominfo.Roomuuid)
-		chatMessage := socket.Chatmessage{Historyuuid: historyUuid, From: userPlatform, Stamp: timeUnix, Message: "https://smzb2.zanxingtv.com//img//external//beststartv//gift//gif//appreciate.gif", Style: "send gift"}
+		// roominfo := common.Roomsinforead(packetSendShell.Payload.Roominfo.Roomcore.Roomuuid)
+		chatMessage := socket.Chatmessage{
+			Historyuuid: historyUuid,
+			From:        userPlatform,
+			Stamp:       timeUnix,
+			Message:     "https://smzb2.zanxingtv.com//img//external//beststartv//gift//gif//appreciate.gif",
+			Style:       "send gift",
+		}
 		sendGiftBroadcast := socket.Cmd_b_send_gift{Base_B: socket.Base_B{Cmd: socket.CMD_B_SEND_GIFT, Stamp: timeUnix}}
 		sendGiftBroadcast.Payload.Chatmessage = chatMessage
 		sendGiftBroadcast.Payload.Chattarget = packetSendShell.Payload.Chattarget
@@ -46,7 +50,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 
 		SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "ok", Exp: common.Exception("", "", nil)}}
 		SendMsgJson, _ := json.Marshal(SendMsg)
-		common.Sendmessage(connect, SendMsgJson)
+		common.Sendmessage(connCore, SendMsgJson)
 
 		return nil
 
@@ -55,13 +59,19 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if len(shellCmd) < 2 {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_PARAMETER_ERROR", userPlatform.Useruuid, nil)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return nil
 		}
 
 		historyUuid := common.Getid().Hexstring()
 		timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
-		chatMessage := socket.Chatmessage{Historyuuid: historyUuid, From: userPlatform, Stamp: timeUnix, Message: "subscription", Style: "subscription"}
+		chatMessage := socket.Chatmessage{
+			Historyuuid: historyUuid,
+			From:        userPlatform,
+			Stamp:       timeUnix,
+			Message:     "subscription",
+			Style:       "subscription",
+		}
 		subscriptionBroadcast := socket.Cmd_b_subscription{Base_B: socket.Base_B{Cmd: socket.CMD_B_SUBSCRIPTION, Stamp: timeUnix}}
 		subscriptionBroadcast.Payload.Chatmessage = chatMessage
 		subscriptionBroadcast.Payload.Chattarget = packetSendShell.Payload.Chattarget
@@ -73,7 +83,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 
 		SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "ok", Exp: common.Exception("", "", nil)}}
 		SendMsgJson, _ := json.Marshal(SendMsg)
-		common.Sendmessage(connect, SendMsgJson)
+		common.Sendmessage(connCore, SendMsgJson)
 
 		return nil
 
@@ -82,13 +92,13 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if len(shellCmd) < 4 {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_PARAMETER_ERROR", userPlatform.Useruuid, nil)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return nil
 		}
 
 		roomInfo, _ := common.Roomsinforead(packetSendShell.Payload.Chattarget)
-		roomType := roomInfo.Roomtype
-		roomUuid := roomInfo.Roomuuid
+		roomType := roomInfo.Roomcore.Roomtype
+		roomUuid := roomInfo.Roomcore.Roomuuid
 		role := "admin"
 		addUuid := shellCmd[3]
 
@@ -97,7 +107,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if err != nil {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_SELECT_USER_ERROR", userPlatform.Useruuid, err)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return nil
 		}
 
@@ -107,7 +117,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if err != nil {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_SELECT_ADMINSET_ERROR", userPlatform.Useruuid, err)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return nil
 		}
 
@@ -116,7 +126,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if err != nil {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_JSON_ADMINSET_ERROR", userPlatform.Useruuid, err)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return nil
 		}
 		userRole, ok := adminSet[addUuid]
@@ -152,13 +162,13 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 
 		_, err = database.Exec("UPDATE "+roomType+" SET adminSet = ? where roomUuid = ?", adminSetJson, roomUuid)
 		if err != nil {
-			log.Printf("Playersendmsg err : %+v\n", err)
+			// log.Printf("Playersendmsg err : %+v\n", err)
 			return nil
 		}
 
 		SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "ok", Exp: common.Exception("", "", nil)}}
 		SendMsgJson, _ := json.Marshal(SendMsg)
-		common.Sendmessage(connect, SendMsgJson)
+		common.Sendmessage(connCore, SendMsgJson)
 
 		// log.Printf("adminSetJson : %+v\n", adminSetJson)
 
@@ -178,7 +188,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if len(shellCmd) < 3 {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_PARAMETER_ERROR", userPlatform.Useruuid, nil)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return nil
 		}
 
@@ -188,7 +198,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 			if len(value) != 2 {
 				SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_PARAMETER_ERROR", userPlatform.Useruuid, nil)}}
 				SendMsgJson, _ := json.Marshal(SendMsg)
-				common.Sendmessage(connect, SendMsgJson)
+				common.Sendmessage(connCore, SendMsgJson)
 				return nil
 			}
 			switch value[0] {
@@ -199,7 +209,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 				if err != nil {
 					SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_SELECT_USER_ERROR", userPlatform.Useruuid, err)}}
 					SendMsgJson, _ := json.Marshal(SendMsg)
-					common.Sendmessage(connect, SendMsgJson)
+					common.Sendmessage(connCore, SendMsgJson)
 					return nil
 				}
 
@@ -207,7 +217,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 			default:
 				SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_SHELL_ERROR", userPlatform.Useruuid, nil)}}
 				SendMsgJson, _ := json.Marshal(SendMsg)
-				common.Sendmessage(connect, SendMsgJson)
+				common.Sendmessage(connCore, SendMsgJson)
 				return nil
 			}
 		}
@@ -219,7 +229,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if err != nil {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_PATCH_ERROR", userPlatform.Useruuid, err)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return nil
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -228,12 +238,12 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if err != nil {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_REQUEST_ERROR", userPlatform.Useruuid, err)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return nil
 		}
 		SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "ok", Exp: common.Exception("", "", nil)}}
 		SendMsgJson, _ := json.Marshal(SendMsg)
-		common.Sendmessage(connect, SendMsgJson)
+		common.Sendmessage(connCore, SendMsgJson)
 
 		return nil
 
@@ -242,7 +252,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if len(shellCmd) < 4 {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_PARAMETER_ERROR", userPlatform.Useruuid, nil)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return nil
 		}
 
@@ -251,7 +261,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if err != nil {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_TIME_ERROR", userPlatform.Useruuid, err)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return err
 		}
 
@@ -260,7 +270,7 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		if err != nil {
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_TIME_ERROR", userPlatform.Useruuid, err)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return err
 		}
 
@@ -271,27 +281,42 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 			timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 			message := timeUnix + "-" + strconv.FormatInt(i, 10)
 			roomInfo, _ := common.Roomsinforead(packetSendShell.Payload.Chattarget)
-			chatMessage := socket.Chatmessage{Historyuuid: historyUuid, From: userPlatform, Stamp: timeUnix, Message: message, Style: packetSendShell.Payload.Style}
+			chatMessage := socket.Chatmessage{
+				Historyuuid: historyUuid,
+				From:        userPlatform,
+				Stamp:       timeUnix,
+				Message:     message,
+				Style:       packetSendShell.Payload.Style,
+			}
 			sendMsgBroadcast := socket.Cmd_b_player_speak{Base_B: socket.Base_B{Cmd: socket.CMD_B_PLAYER_SPEAK, Stamp: timeUnix}}
 			sendMsgBroadcast.Payload.Chatmessage = chatMessage
-			sendMsgBroadcast.Payload.Chattarget = roomInfo.Roomuuid
+			sendMsgBroadcast.Payload.Chattarget = roomInfo.Roomcore.Roomuuid
 			sendMsgBroadcastJson, _ := json.Marshal(sendMsgBroadcast)
 
-			common.Redispubroomdata(roomInfo.Roomuuid, sendMsgBroadcastJson)
+			common.Redispubroomdata(roomInfo.Roomcore.Roomuuid, sendMsgBroadcastJson)
 
-			chatMessageHsitory := common.Chathistory{Historyuuid: historyUuid, Chattarget: roomInfo.Roomuuid, Myuuid: userPlatform.Useruuid, Myplatformuuid: userPlatform.Platformuuid, Myplatform: userPlatform.Platform, Stamp: timeUnix, Message: message, Style: packetSendShell.Payload.Style}
+			chatMessageHsitory := common.Chathistory{
+				Historyuuid:    historyUuid,
+				Chattarget:     roomInfo.Roomcore.Roomuuid,
+				Myuuid:         userPlatform.Useruuid,
+				Myplatformuuid: userPlatform.Platformuuid,
+				Myplatform:     userPlatform.Platform,
+				Stamp:          timeUnix,
+				Message:        message,
+				Style:          packetSendShell.Payload.Style,
+			}
 			// Index a second tweet (by string)
 			chatMessageJson, _ := json.Marshal(chatMessageHsitory)
 
 			// log.Printf("chatMessageHsitory : %+v\n", chatMessageHsitory)
 
-			err = common.Esinsert(os.Getenv(roomInfo.Roomtype), string(chatMessageJson[:]))
+			err = common.Esinsert(os.Getenv(roomInfo.Roomcore.Roomtype), string(chatMessageJson))
 			time.Sleep(time.Duration(duration) * time.Millisecond)
 			// time.Sleep(time.Duration(250) * time.Millisecond)
 		}
 		SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "ok", Exp: common.Exception("", "", nil)}}
 		SendMsgJson, _ := json.Marshal(SendMsg)
-		common.Sendmessage(connect, SendMsgJson)
+		common.Sendmessage(connCore, SendMsgJson)
 
 		return nil
 
@@ -303,10 +328,10 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		var url = "http://192.168.20.169/api/Spaces-1/deployments"
 		req, err := http.NewRequest("POST", url, strings.NewReader(string(releasseMapJson)))
 		if err != nil {
-			log.Printf("C8763 err : %+v\n", err)
+			// log.Printf("C8763 err : %+v\n", err)
 			SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_OCTOPUS_URL_ERROR", userPlatform.Useruuid, err)}}
 			SendMsgJson, _ := json.Marshal(SendMsg)
-			common.Sendmessage(connect, SendMsgJson)
+			common.Sendmessage(connCore, SendMsgJson)
 			return err
 		}
 		req.Header.Set("Content-Type", "application/json")
@@ -316,13 +341,13 @@ func shelldemo(shellCmd []string, connect *websocket.Conn, userPlatform socket.U
 		// log.Printf("C8763 err : %+v\n", err)
 		SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "ok", Exp: common.Exception("", "", nil)}}
 		SendMsgJson, _ := json.Marshal(SendMsg)
-		common.Sendmessage(connect, SendMsgJson)
+		common.Sendmessage(connCore, SendMsgJson)
 
 		return nil
 	default:
 		SendMsg := socket.Cmd_r_player_send_shell{Base_R: socket.Base_R{Cmd: socket.CMD_R_PLAYER_SEND_SHELL, Idem: packetSendShell.Idem, Stamp: timeUnix, Result: "err", Exp: common.Exception("SHELL_SHELLDEMO_SHELL_ERROR", userPlatform.Useruuid, nil)}}
 		SendMsgJson, _ := json.Marshal(SendMsg)
-		common.Sendmessage(connect, SendMsgJson)
+		common.Sendmessage(connCore, SendMsgJson)
 		return nil
 	}
 }

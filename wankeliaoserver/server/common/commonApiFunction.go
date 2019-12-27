@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+
 	"os"
 	"os/signal"
 	"strings"
@@ -18,7 +19,7 @@ import (
 )
 
 var apiKeyList = map[string]string{}
-var mutexApiKeyList sync.Mutex
+var mutexApiKeyList = new(sync.Mutex)
 
 func ResponseWithJson(w http.ResponseWriter, code int, data map[string]interface{}) {
 	jsonStr, _ := json.Marshal(data)
@@ -31,7 +32,7 @@ func Queryapikey() {
 
 	rows, err := database.Query("select apiKey, clientName from apiKeyList")
 	if err != nil {
-		log.Printf("Queryapikey err : %+v\n", err)
+		// log.Printf("Queryapikey err : %+v\n", err)
 		return
 	}
 
@@ -112,6 +113,13 @@ func PostApiForm(url string, data url.Values) (resp *http.Response, err error) {
 }
 
 func Checkplatformuser(platform string, platformUuid string, token string) (bool, error) {
+	var err error
+
+	redisToken, ok := Getredisusertoken(platform + "_" + platformUuid)
+	if ok && redisToken == token {
+		return true, err
+	}
+
 	urlLink := os.Getenv("userCheckUrl"+platform) + "/auth/user/tokenCheck"
 	data := url.Values{"token": {token}}
 	req, err := http.NewRequest("POST", urlLink, strings.NewReader(data.Encode()))
@@ -134,8 +142,8 @@ func Checkplatformuser(platform string, platformUuid string, token string) (bool
 	}
 
 	var platformResult struct {
-		Code    int
-		Message string
+		Code    int    `json:"code"`
+		Message string `json:"message"`
 	}
 	err = json.Unmarshal(body, &platformResult)
 	if err != nil {
@@ -147,10 +155,54 @@ func Checkplatformuser(platform string, platformUuid string, token string) (bool
 		Essyserrorlog("COMMON_CHECKPLATFORMUSER_PLATFORM_UUID_ERROR", platform+"-"+platformUuid, nil)
 		return false, nil
 	}
-
+	Setredisusertoken(platform+"_"+platformUuid, token)
 	return true, err
 }
 
+func Getplatformuser(platform string, platformUuid string) (bool, error) {
+	urlLink := os.Getenv("userCheckUrl"+platform) + "/users"
+	data := url.Values{"uuid": {platformUuid}}
+	// log.Printf("Getplatformuser urlLink : %+v\n", urlLink)
+	// log.Printf("Getplatformuser data : %+v\n", data)
+	req, err := http.NewRequest("POST", urlLink, strings.NewReader(data.Encode()))
+	if err != nil {
+		Essyserrorlog("COMMON_GETPLATFORMUSER_NEW_REQUEST_ERROR", platform+"-"+platformUuid, err)
+		return false, err
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		Essyserrorlog("COMMON_GETPLATFORMUSER_REQUEST_ERROR", platform+"-"+platformUuid, err)
+		return false, err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		Essyserrorlog("COMMON_GETPLATFORMUSER_BODY_ERROR", platform+"-"+platformUuid, err)
+		return false, err
+	}
+
+	// log.Printf("Getplatformuser body : %+v\n", string(body))
+	var platformResult struct {
+		Code    int                      `json:"code"`
+		Message string                   `json:"message"`
+		Data    []map[string]interface{} `json:"data"`
+	}
+	err = json.Unmarshal(body, &platformResult)
+	if err != nil {
+		Essyserrorlog("COMMON_GETPLATFORMUSER_JSON_ERROR", platform+"-"+platformUuid, err)
+		return false, err
+	}
+
+	// log.Printf("Getplatformuser platformResult : %+v\n", platformResult)
+	if platformResult.Code != 10000 {
+		Essyserrorlog("COMMON_GETPLATFORMUSER_PLATFORM_UUID_ERROR", platform+"-"+platformUuid, nil)
+		return false, nil
+	}
+
+	return true, err
+}
 func Alivecheck() {
 
 	defer log.Println("Alivecheck end")

@@ -1,0 +1,20 @@
+{
+	"imServerPort"   :  ":80",
+	"elasticSearchHost" :  "http://34.80.209.249:9200",
+	"redisHost" :  "34.80.209.249:6379",
+	"dbHost"   :  "34.80.209.249:3306",
+	"dbAccount"   :  "solar",
+	"dbPassword"   :  "Aa123456",
+	"sysLog" :  "syslog",
+	"sysErrorLog" :  "syserrorlog",
+	"sysRoomLog" :  "sysroomlog",
+	"sideText" :  "sidetext",
+	"liveGroup" :  "livegroup",
+	"vipGroup" :  "vipgroup",
+	"privateGroup" :  "privategroup",
+	"releaseId" : "Releases-1662",
+	"environmentId" : "Environments-2",
+	"uploadPath" : "/home/solar/public/mml-assets/",
+	"linkPath" : "https://beta-mml-chat-client-assets.zanxingbctv.com/",
+	"userCheckUrlMM" : "https://mmt.zanxingbctv.com/v0.3"
+}

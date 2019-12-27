@@ -47,7 +47,32 @@ func Queryblocklist() {
 	rows.Close()
 }
 
-func Checkblock(roomUuid string, uuid string) bool {
+func Queryblockiplist() {
+
+	rows, err := database.Query("select blockUuid,blockip,timeStamp from chatIpBlock where timeStamp >= ?", time.Now().UnixNano()/int64(time.Millisecond))
+
+	// log.Printf("select blockUuid,blockUserUuid,blocktarget,timeStamp from chatBlock where timeStamp >= %+v\n", time.Now().UnixNano()/int64(time.Millisecond))
+
+	if err != nil {
+		Essyserrorlog("COMMON_QUERYBLOCKIPLIST_ERROR", "", err)
+		return
+	}
+	var blockUuid string
+	var blockip string
+	var timeStamp int64
+
+	MutexblockipList.Lock()
+	defer MutexblockipList.Unlock()
+
+	BlockipList = make(map[string]int64)
+	for rows.Next() {
+		rows.Scan(&blockUuid, &blockip, &timeStamp)
+		BlockipList[blockUuid] = timeStamp
+	}
+	rows.Close()
+}
+
+func Checkblock(loginUuid string, roomUuid string, uuid string) bool {
 
 	Mutexblockchatlist.Lock()
 	defer Mutexblockchatlist.Unlock()
@@ -69,6 +94,19 @@ func Checkblock(roomUuid string, uuid string) bool {
 			}
 		}
 	}
+
+	Mutexiplist.Lock()
+	defer Mutexiplist.Unlock()
+	ip, ok := Iplist[uuid]
+	if ok {
+		stamp, ok := BlockipList[ip]
+		if ok {
+			if stamp > time.Now().UnixNano()/int64(time.Millisecond) {
+				return true
+			}
+		}
+	}
+
 	return false
 }
 
@@ -188,7 +226,7 @@ func Queryfunctionmanagement() {
 	Mutexclients.Lock()
 	defer Mutexclients.Unlock()
 	for _, client := range Clients {
-		Sendmessage(client.Conn, sendFunctionManagementJson)
+		Sendmessage(client.Conncore, sendFunctionManagementJson)
 	}
 }
 

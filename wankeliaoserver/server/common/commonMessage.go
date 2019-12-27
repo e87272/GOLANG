@@ -1,28 +1,34 @@
 package common
 
 import (
+	"context"
 	"encoding/json"
+	"math/rand"
+	"log"
+
 	"math"
+	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/olivere/elastic"
 
 	"../database"
 	"../socket"
 )
 
-func Sendmessage(conn *websocket.Conn, msg []byte) {
+func Sendmessage(conn Conncore, msg []byte) {
 
 	//加鎖 加鎖 加鎖
-	Mutexconnect.Lock()
+	conn.Connmutex.Lock()
 	// log.Printf("Mutexconnect :SendmessageLock\n")
 	defer func() {
-		Mutexconnect.Unlock() // 完成後記得 解鎖 解鎖 解鎖
+		conn.Connmutex.Unlock() // 完成後記得 解鎖 解鎖 解鎖
 		// log.Printf("Mutexconnect :SendmessageUNLock\n")
 	}()
-	err := conn.WriteMessage(websocket.TextMessage, msg)
+	err := conn.Conn.WriteMessage(websocket.TextMessage, msg)
 	if err != nil {
 		// Handle error
 		// log.Printf("WriteMessage : %+v\n", err)
@@ -33,7 +39,7 @@ func Sendmessage(conn *websocket.Conn, msg []byte) {
 
 }
 
-func Broadcast(roomUuid string, msg []byte) {
+func copyConn(roomUuid string) []Conncore {
 
 	// log.Printf("roomUuid : %s\n", roomUuid)
 	Mutexrooms.Lock()
@@ -43,28 +49,54 @@ func Broadcast(roomUuid string, msg []byte) {
 		// log.Printf("Mutexrooms :BroadcastUNLock\n")
 	}()
 
-	var data socket.Cmd_b_player_speak
-
-	err := json.Unmarshal(msg, &data)
-	if err != nil {
-		panic(err)
-	}
-
-	_, ok := Usersinforead(data.Payload.Chatmessage.From.Useruuid)
-
-	if ok {
-		Isspeakcd(data.Payload.Chatmessage.From.Useruuid, data.Payload.Chatmessage.Stamp)
-	}
-
-	// log.Printf("roomUuid : %s\n", roomUuid)
 	targetroom := Rooms[roomUuid]
-	// log.Printf("targetroom : %+v\n", len(targetroom))
+
+	var connArray []Conncore
 
 	for loginUuid := range targetroom {
-		Sendmessage(targetroom[loginUuid].Conn, msg)
+		// log.Printf("loginUuid : %+v\n", loginUuid)
+		connArray = append(connArray, targetroom[loginUuid].Conncore)
+
 	}
+	return connArray
 }
 
+func Broadcast(roomUuid string, msg []byte, packetStamp int64) {
+
+	connArray := copyConn(roomUuid)
+	
+	if len(connArray) > 0{
+		index := rand.Intn(len(connArray))
+
+		ok := Dropmsg(connArray[index], msg, packetStamp)
+		if ok {
+			timeUnix := time.Now().UnixNano() / int64(time.Millisecond)
+			Essyslog(string(msg), "timeUnix : "+strconv.FormatInt(timeUnix, 10)+" packetStamp : "+strconv.FormatInt(packetStamp, 10), "Broadcast")
+			return
+		}
+	}
+
+	for _, conn := range connArray {
+		// log.Printf("loginUuid : %+v\n", loginUuid)
+		Sendmessage(conn, msg)
+	}
+	// log.Printf("-------------------------end-------------------------\n")
+	return
+}
+
+func Dropmsg(connCore Conncore, msg []byte, packetStamp int64) bool {
+
+	connCore.Connmutex.Lock()
+	defer connCore.Connmutex.Unlock()
+
+	//訊息過久直接略過
+	timeUnix := time.Now().UnixNano() / int64(time.Millisecond)
+	if timeUnix-packetStamp > Packetdroptime {
+		return true
+	}
+
+	return false
+}
 func Isspeakcd(userUuid string, timeUnix string) bool {
 	Mutexspeakcdtime.Lock()
 	defer Mutexspeakcdtime.Unlock()
@@ -83,6 +115,22 @@ func Isspeakcd(userUuid string, timeUnix string) bool {
 	return false
 }
 
+func Isnewuser(userUuid string) bool {
+
+	// log.Printf("Isnewuser : %+v\n", userUuid)
+	cdTime, ok := Blocknewuserlistread(userUuid)
+	// log.Printf("Isnewuser cdTime : %+v\n", cdTime)
+	if !ok {
+		return false
+	}
+
+	if time.Now().UnixNano()/int64(time.Millisecond) > cdTime {
+		Blocknewuserlistdelete(userUuid)
+		return false
+	}
+
+	return true
+}
 func BroadcastAdmin(roomUuid string, msg []byte, functionName string) {
 
 	// log.Printf("roomUuid : %s\n", roomUuid)
@@ -101,16 +149,17 @@ func BroadcastAdmin(roomUuid string, msg []byte, functionName string) {
 		// log.Printf("targetroom uuid: %+v\n", uuid)
 		if Checkadmin(roomUuid, targetroom[uuid].Userplatform.Useruuid, functionName) {
 			// log.Printf("BroadcastAdmin msg : %s\n", string(msg))
-			Sendmessage(targetroom[uuid].Conn, msg)
+			Sendmessage(targetroom[uuid].Conncore, msg)
 		}
 	}
 }
 
-var mutexGlobalMessage sync.Mutex
+var mutexGlobalMessage = new(sync.Mutex)
 var globalMessageList = map[string]GlobalMessage{}
 var globalMessageTimer = time.NewTimer(0)
 
 func Queryglobalmessage() {
+	// log.Printf("Queryglobalmessage start\n")
 
 	now := time.Now().UnixNano() / int64(time.Millisecond)
 
@@ -143,22 +192,27 @@ func Queryglobalmessage() {
 			}
 		}
 	}
+	rows.Close()
 
 	if len(globalMessageList) > 0 {
 		globalMessageTimer.Reset(time.Duration((nextTickTime - now) * int64(time.Millisecond)))
 	}
+	// log.Printf("Queryglobalmessage end\n")
 }
 
 func Servertick() {
 	for {
 		select {
 		case <-globalMessageTimer.C:
+			// log.Printf("Servertick start\n")
 			globalMessageTimerTick()
+			// log.Printf("Servertick end\n")
 		}
 	}
 }
 
 func globalMessageTimerTick() {
+	// log.Printf("globalMessageTimerTick start\n")
 
 	mutexGlobalMessage.Lock()
 	defer mutexGlobalMessage.Unlock()
@@ -187,9 +241,26 @@ func globalMessageTimerTick() {
 	if len(globalMessageList) > 0 {
 		globalMessageTimer.Reset(time.Duration((nextTickTime - now) * int64(time.Millisecond)))
 	}
+	// log.Printf("globalMessageTimerTick end\n")
+}
+
+func copyAllConn() []Conncore {
+
+	// log.Printf("copyAllConn start\n")
+	Mutexclients.Lock()
+	defer Mutexclients.Unlock()
+
+	var connArray []Conncore
+	for _, client := range Clients {
+		connArray = append(connArray, client.Conncore)
+	}
+
+	// log.Printf("copyAllConn end\n")
+	return connArray
 }
 
 func globalMessageBroadcast(station string, msg string) {
+	// log.Printf("globalMessageBroadcast start\n")
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendBroadcast := socket.Cmd_b_global_message{
@@ -205,9 +276,148 @@ func globalMessageBroadcast(station string, msg string) {
 	}
 	sendBroadcastJson, _ := json.Marshal(sendBroadcast)
 
-	Mutexclients.Lock()
-	defer Mutexclients.Unlock()
-	for _, client := range Clients {
-		Sendmessage(client.Conn, sendBroadcastJson)
+	connArray := copyAllConn()
+	log.Printf("connArray count : %+v\n", len(connArray))
+	for _, conn := range connArray {
+		Sendmessage(conn, sendBroadcastJson)
 	}
+	// log.Printf("globalMessageBroadcast end\n")
+}
+
+func Sendclearusermsg(data string) {
+	packetStamp := time.Now().UnixNano() / int64(time.Millisecond)
+	timeUnix := strconv.FormatInt(packetStamp, 10)
+	clearUserMsgData := Redispubsubclearusermsgdata{}
+	json.Unmarshal([]byte(data), &clearUserMsgData)
+
+	sendBroadcast := socket.Cmd_b_clear_user_msg{
+		Base_B: socket.Base_B{
+			Cmd:   socket.CMD_B_CLEAR_USER_MSG,
+			Stamp: timeUnix,
+		},
+		Payload: socket.Clearusermsg{
+			Roomuuid:   clearUserMsgData.Roomuuid,
+			Targetuuid: clearUserMsgData.Targetuuid,
+		},
+	}
+	sendBroadcastJson, _ := json.Marshal(sendBroadcast)
+
+	Broadcast(clearUserMsgData.Roomuuid, sendBroadcastJson, packetStamp)
+}
+
+func Membercountbroadcast(data string) {
+
+	var roomCountBroadcast socket.Cmd_b_room_member_count
+
+	err := json.Unmarshal([]byte(data), &roomCountBroadcast)
+	if err != nil {
+		panic(err)
+	}
+
+	packetStamp, _ := strconv.ParseInt(roomCountBroadcast.Stamp, 10, 64)
+
+	go Broadcast(roomCountBroadcast.Payload.Roomuuid, []byte(data), packetStamp)
+
+}
+
+func Hierarchyroomlastmessage(loginUuid string, userUuid string, roomCore socket.Roomcore) socket.Chatmessage {
+
+	lastMessage := socket.Chatmessage{}
+
+	lastMessage, ok := Getredisroomlastmessage(roomCore.Roomuuid)
+
+	if !ok {
+		boolQ := elastic.NewBoolQuery()
+		boolQ.Filter(elastic.NewMatchQuery("chatTarget", roomCore.Roomuuid))
+
+		// Search with a term query
+		searchResult, err := Elasticclient.Search(os.Getenv(roomCore.Roomtype)).Query(boolQ).Sort("historyUuid", false).Size(1).Do(context.Background()) // execute
+
+		if err != nil {
+			Exception("COMMON_HIERARCHYROOMLASTMESSAGE_ES_SEARCH_ERROR", userUuid, err)
+			return lastMessage
+		}
+
+		// Here's how you iterate through results with full control over each step.
+		if searchResult.Hits.TotalHits.Value > 0 {
+
+			// Iterate through results
+			for _, hit := range searchResult.Hits.Hits {
+				// hit.Index contains the name of the index
+				// log.Printf("hit : %+v\n", hit)
+				// Deserialize hit.Source into a Tweet (could also be just a map[string]interface{}).
+				var chatHistory Chathistory
+
+				err := json.Unmarshal(hit.Source, &chatHistory)
+				if err != nil {
+					// Deserialization failed
+				}
+
+				// Work with tweet
+				// log.Printf("ChatMessage : %+v\n", chatHistory)
+
+				lastMessage.Historyuuid = chatHistory.Historyuuid
+				lastMessage.From.Useruuid = chatHistory.Myuuid
+				lastMessage.From.Platformuuid = chatHistory.Myplatformuuid
+				lastMessage.From.Platform = chatHistory.Myplatform
+				lastMessage.Stamp = chatHistory.Stamp
+				lastMessage.Message = chatHistory.Message
+				lastMessage.Style = chatHistory.Style
+				break
+			}
+		}
+		Setredisroomlastmessage(roomCore.Roomuuid, lastMessage)
+	}
+
+	return lastMessage
+}
+
+func Hierarchysidetextlastmessage(loginUuid string, userUuid string, sideTextUuid string) socket.Chatmessage {
+
+	lastMessage := socket.Chatmessage{}
+
+	lastMessage, ok := Getredissidetextlastmessage(sideTextUuid)
+
+	if !ok {
+		boolQ := elastic.NewBoolQuery()
+		boolQ.Filter(elastic.NewMatchQuery("chatTarget", sideTextUuid))
+		searchResult, err := Elasticclient.Search(os.Getenv("sideText")).Query(boolQ).Sort("historyUuid", false).Size(1).Do(context.Background())
+
+		if err != nil {
+			Exception("COMMON_HIERARCHYSIDETEXTLASTMESSAGE_ES_SEARCH_ERROR", userUuid, err)
+			return lastMessage
+		}
+
+		// Here's how you iterate through results with full control over each step.
+		if searchResult.Hits.TotalHits.Value > 0 {
+
+			// Iterate through results
+			for _, hit := range searchResult.Hits.Hits {
+				// hit.Index contains the name of the index
+				// log.Printf("hit : %+v\n", hit)
+				// Deserialize hit.Source into a Tweet (could also be just a map[string]interface{}).
+				var chatHistory Chathistory
+
+				err := json.Unmarshal(hit.Source, &chatHistory)
+				if err != nil {
+					// Deserialization failed
+				}
+
+				// Work with tweet
+				// log.Printf("ChatMessage : %+v\n", chatHistory)
+
+				lastMessage.Historyuuid = chatHistory.Historyuuid
+				lastMessage.From.Useruuid = chatHistory.Myuuid
+				lastMessage.From.Platformuuid = chatHistory.Myplatformuuid
+				lastMessage.From.Platform = chatHistory.Myplatform
+				lastMessage.Stamp = chatHistory.Stamp
+				lastMessage.Message = chatHistory.Message
+				lastMessage.Style = chatHistory.Style
+				break
+			}
+		}
+		Setredissidetextlastmessage(sideTextUuid, lastMessage)
+	}
+
+	return lastMessage
 }

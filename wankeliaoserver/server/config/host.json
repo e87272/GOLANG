@@ -19,5 +19,6 @@
 	"userCheckUrlMM" : "#{userCheckUrlMM}",
 	"roleUuidAdmin" : "#{roleUuidAdmin}",
 	"roleUuidStreamer" : "#{roleUuidStreamer}",
-	"roleUuidPrivateAndVipAdmin" : "#{roleUuidPrivateAndVipAdmin}"
+	"roleUuidPrivateAndVipAdmin" : "#{roleUuidPrivateAndVipAdmin}",
+	"tokenByTest" : "#{tokenByTest}"
 }

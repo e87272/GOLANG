@@ -15,7 +15,7 @@ func setLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rStr, _ := json.Marshal(r.Form)
-	common.Essyslog(string(rStr), "/emit/setLog", r.Header["Client-Name"][0])
+	common.Esclientslog(string(rStr), "/emit/setLog", r.Header["Client-Name"][0])
 
 	result := map[string]interface{}{}
 	result["result"] = "ok"

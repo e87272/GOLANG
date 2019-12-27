@@ -54,7 +54,7 @@ func blockSearchUser(w http.ResponseWriter, r *http.Request) {
 		blockDataJson, err := json.Marshal(blockData)
 		// log.Printf("blockDataJson : %+v\n", blockDataJson)
 
-		// log.Printf("blockDataJsonstring : %s\n", string(blockDataJson[:]))
+		// log.Printf("blockDataJsonstring : %s\n", string(blockDataJson))
 
 		if err != nil {
 			result["result"] = "err"
@@ -63,7 +63,7 @@ func blockSearchUser(w http.ResponseWriter, r *http.Request) {
 			common.Essyserrorlog("API_BLOCKSEARCHUSER_JSON_ERROR", r.Header["Client-Name"][0], err)
 			return
 		}
-		blockList[blockUuid] = string(blockDataJson[:])
+		blockList[blockUuid] = string(blockDataJson)
 	}
 	rows.Close()
 

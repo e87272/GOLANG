@@ -1,7 +1,6 @@
 package database
 
 import (
-	"log"
 	"sync"
 	"time"
 
@@ -11,7 +10,7 @@ import (
 	"os"
 )
 
-var mutexMainDatabase sync.Mutex
+var mutexMainDatabase = new(sync.Mutex)
 var wankeliaoDatabase *sql.DB
 var ErrNoRows = sql.ErrNoRows
 
@@ -19,7 +18,7 @@ func Linkdb() {
 	var err error
 	wankeliaoDatabase, err = sql.Open("mysql", os.Getenv("dbAccount")+":"+os.Getenv("dbPassword")+"@tcp("+os.Getenv("dbHost")+")/wankeliao")
 	for err != nil {
-		log.Printf("Linkdb err %+v\n", err)
+		// log.Printf("Linkdb err %+v\n", err)
 		now := time.Now().UnixNano()
 		for time.Now().UnixNano() <= now+1e9 {
 		}

@@ -58,6 +58,12 @@ func Eschatinit(IndexName string) error {
 						},
 						"style":{
 							"type":"text"
+						},
+						"ip":{
+							"type":"keyword"
+						},
+						"forwardChatMessage":{
+							"type":"text"
 						}
 					}
 				}`
@@ -200,7 +206,7 @@ func Esinsert(IndexName string, data string) error {
 	}()
 	_, err := Elasticclient.Index().
 		Index(IndexName).
-		BodyString(string(data[:])).
+		BodyString(data).
 		Do(context.Background())
 	if err != nil {
 		// log.Printf("Elasticclient err : %+v\n", err)

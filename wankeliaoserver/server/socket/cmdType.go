@@ -37,18 +37,18 @@ type Logininfo struct {
 }
 
 type Roominfo struct {
-	Roomuuid      string       `json:"roomUuid"`
+	Roomcore      Roomcore     `json:"roomCore"`
 	Roomname      string       `json:"roomName"`
-	Roomtype      string       `json:"roomType"`
 	Roomicon      string       `json:"roomIcon"`
 	Adminset      string       `json:"adminSet"`
 	Ownerplatform Userplatform `json:"ownerPlatform"`
 }
 
 type Sendmessage struct {
-	Chattarget string `json:"chatTarget"`
-	Style      string `json:"style"`
-	Message    string `json:"message"`
+	Chattarget         string `json:"chatTarget"`
+	Style              string `json:"style"`
+	Message            string `json:"message"`
+	Forwardchatmessage string `json:"forwardChatMessage"`
 }
 
 type Proclamation struct {
@@ -77,16 +77,26 @@ type Userplatform struct {
 }
 
 type Chatmessage struct {
-	Historyuuid string       `json:"historyUuid"`
-	From        Userplatform `json:"from"`
-	Stamp       string       `json:"stamp"`
-	Message     string       `json:"message"`
-	Style       string       `json:"style"`
+	Historyuuid        string       `json:"historyUuid"`
+	From               Userplatform `json:"from"`
+	Stamp              string       `json:"stamp"`
+	Message            string       `json:"message"`
+	Style              string       `json:"style"`
+	Ip                 string       `json:"ip"`
+	Forwardchatmessage string       `json:"forwardChatMessage"`
 }
 
 type Roomcore struct {
 	Roomuuid string `json:"roomUuid"`
 	Roomtype string `json:"roomType"`
+}
+
+type Roomstation struct {
+	Roomuuid          string `json:"roomUuid"`
+	Roomtype          string `json:"roomType"`
+	Station           string `json:"station"`
+	Ownerplatform     string `json:"ownerPlatform"`
+	Ownerplatformuuid string `json:"ownerPlatformUuid"`
 }
 
 type Newsidetext struct {
@@ -104,4 +114,9 @@ type Globalmessage struct {
 	Historyuuid string `json:"historyUuid"`
 	Station     string `json:"station"`
 	Message     string `json:"message"`
+}
+
+type Clearusermsg struct {
+	Roomuuid   string `json:"roomUuid"`
+	Targetuuid string `json:"targetUuid"`
 }

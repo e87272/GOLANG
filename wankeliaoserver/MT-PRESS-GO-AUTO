@@ -1,0 +1,49 @@
+#! /bin/bash
+# chkconfig: 2345 20 80
+# description: Start and Stop golang
+#. /etc/init.d/functions
+SERVER_FILE=press10room
+SERVER_FOLDER=/usr/local/wankeliaoserver/
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+export PATH
+case "$1" in
+    start)
+ ps -fe|grep "./$SERVER_FILE" |grep -v grep
+ if [ $? -eq 0 ]
+        then
+            echo "$SERVER_FILE is already running or crashed."
+        else
+            echo "Starting Golang server..."
+     cd $SERVER_FOLDER
+     sudo nohup setsid ./$SERVER_FILE &> my_log.txt &
+        fi
+        if [ "$?"="0" ]
+        then
+            echo "Golang is running..."
+        fi
+        ;;
+    stop)
+ ps -fe|grep "./$SERVER_FILE" |grep -v grep
+ if [ "$?" -ne 0 ]
+        then
+            echo "$SERVER_FILE is not running."
+        else
+            echo "Stopping..."
+            sleep 2
+            echo "Waiting for Go server to shutdown..."
+     pkill "$SERVER_FILE"
+            sleep 1
+            echo "Go server stopped"
+        fi
+        ;;
+    restart|force-reload)
+        ${0} stop
+        ${0} start
+        ;;
+    *)
+        echo "Usage: {start|stop|restart|force-reload}" >&2
+        exit 1
+esac
+
+

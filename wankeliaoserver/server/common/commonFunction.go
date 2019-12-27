@@ -29,27 +29,24 @@ func Myiplastdigit() string {
 
 func Proclamationsearch(roomUuid string) map[string]socket.Proclamation {
 	Mutexproclamationlist.Lock()
+	defer Mutexproclamationlist.Unlock()
 	proclamationlist, ok := Proclamationlist[roomUuid]
-	Mutexproclamationlist.Unlock()
+	// log.Printf("Proclamationsearch Proclamationlist : %+v\n", Proclamationlist)
 	if !ok {
-		Queryproclamation(roomUuid)
-		Mutexproclamationlist.Lock()
-		proclamationlist = Proclamationlist[roomUuid]
-		Mutexproclamationlist.Unlock()
+		proclamationlist = Queryproclamation(roomUuid)
+		Proclamationlist[roomUuid] = proclamationlist
+		// log.Printf("Proclamationsearch !ok Proclamationlist : %+v\n", Proclamationlist)
 	}
 	return proclamationlist
 }
 
-func Queryproclamation(roomUuid string) {
+func Queryproclamation(roomUuid string) map[string]socket.Proclamation {
 
 	var proclamationlist = map[string]socket.Proclamation{}
 	rows, err := database.Query("select proclamationUuid,type,clientOrder,appType,title,content,style,url from proclamation where roomUuid = ?", roomUuid)
 	if err != nil {
 		Essyserrorlog("COMMON_QUERYPROCLAMATION_SELECT_DB_ERROR", "", err)
-		Mutexproclamationlist.Lock()
-		Proclamationlist[roomUuid] = proclamationlist
-		Mutexproclamationlist.Unlock()
-		return
+		return proclamationlist
 	}
 
 	var proclamationUuid string
@@ -61,7 +58,6 @@ func Queryproclamation(roomUuid string) {
 	var style string
 	var url string
 
-	Mutexproclamationlist.Lock()
 	for rows.Next() {
 		rows.Scan(&proclamationUuid, &proclamationType, &order, &appType, &title, &content, &style, &url)
 		var proclamation = socket.Proclamation{}
@@ -79,13 +75,10 @@ func Queryproclamation(roomUuid string) {
 		proclamationlist[proclamationUuid] = proclamation
 	}
 	rows.Close()
-	Proclamationlist[roomUuid] = proclamationlist
-
-	Mutexproclamationlist.Unlock()
-
-	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
+	packetStamp := time.Now().UnixNano() / int64(time.Millisecond)
+	timeUnix := strconv.FormatInt(packetStamp, 10)
 	proclamation := socket.Cmd_b_proclamation{Base_B: socket.Base_B{Cmd: socket.CMD_B_PROCLAMATION, Stamp: timeUnix}, Payload: proclamationlist}
 	proclamationJson, _ := json.Marshal(proclamation)
-	Broadcast(roomUuid, proclamationJson)
-	return
+	Broadcast(roomUuid, proclamationJson, packetStamp)
+	return proclamationlist
 }

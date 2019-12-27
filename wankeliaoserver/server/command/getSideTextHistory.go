@@ -7,21 +7,21 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/olivere/elastic"
 
 	"../common"
 	"../socket"
 )
 
-func Getsidetexthistory(connect *websocket.Conn, msg []byte, loginUuid string) error {
+func Getsidetexthistory(connCore common.Conncore, msg []byte, loginUuid string) error {
 
 	timeUnix := strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	sendSideTextHistory := socket.Cmd_r_get_side_text_history{Base_R: socket.Base_R{
 		Cmd:   socket.CMD_R_GET_SIDETEXT_HISTORY,
 		Stamp: timeUnix,
 	}}
-	userPlatform, _ := common.Clientsuserplatformread(loginUuid)
+	client, _ := common.Clientsread(loginUuid)
+	userPlatform := client.Userplatform
 	userUuid := userPlatform.Useruuid
 
 	var packetSideTextHistory socket.Cmd_c_get_side_text_history
@@ -30,7 +30,7 @@ func Getsidetexthistory(connect *websocket.Conn, msg []byte, loginUuid string) e
 		sendSideTextHistory.Base_R.Result = "err"
 		sendSideTextHistory.Base_R.Exp = common.Exception("COMMAND_GETSIDETEXTHISTORY_JSON_ERROR", userUuid, err)
 		sendSideTextHistoryJson, _ := json.Marshal(sendSideTextHistory)
-		common.Sendmessage(connect, sendSideTextHistoryJson)
+		common.Sendmessage(connCore, sendSideTextHistoryJson)
 		return err
 	}
 	sendSideTextHistory.Base_R.Idem = packetSideTextHistory.Base_C.Idem
@@ -40,7 +40,7 @@ func Getsidetexthistory(connect *websocket.Conn, msg []byte, loginUuid string) e
 		sendSideTextHistory.Base_R.Result = "err"
 		sendSideTextHistory.Base_R.Exp = common.Exception("COMMAND_GETSIDETEXTHISTORY_GUEST", userUuid, nil)
 		sendSideTextHistoryJson, _ := json.Marshal(sendSideTextHistory)
-		common.Sendmessage(connect, sendSideTextHistoryJson)
+		common.Sendmessage(connCore, sendSideTextHistoryJson)
 		return nil
 	}
 
@@ -58,7 +58,7 @@ func Getsidetexthistory(connect *websocket.Conn, msg []byte, loginUuid string) e
 		sendSideTextHistory.Payload.Historyuuid = common.Getid().Hexstring()
 		sendSideTextHistory.Payload.Chattarget = targetSideTextUser.Userplatform.Useruuid
 		sendSideTextHistoryJson, _ := json.Marshal(sendSideTextHistory)
-		common.Sendmessage(connect, sendSideTextHistoryJson)
+		common.Sendmessage(connCore, sendSideTextHistoryJson)
 		return nil
 	}
 
@@ -81,7 +81,7 @@ func Getsidetexthistory(connect *websocket.Conn, msg []byte, loginUuid string) e
 	historyUuid := startStampHex
 
 	boolQ := elastic.NewBoolQuery()
-	boolQ.Must(elastic.NewMatchQuery("chatTarget", targetSideTextUser.Sidetextuuid))
+	boolQ.Filter(elastic.NewMatchQuery("chatTarget", targetSideTextUser.Sidetextuuid))
 	boolQ.Filter(elastic.NewRangeQuery("historyUuid").Gte(startStampHex).Lt(endStampHex))
 
 	// Search with a term query
@@ -91,7 +91,7 @@ func Getsidetexthistory(connect *websocket.Conn, msg []byte, loginUuid string) e
 		sendSideTextHistory.Base_R.Result = "err"
 		sendSideTextHistory.Base_R.Exp = common.Exception("COMMAND_GETSIDETEXTHISTORY_ES_SEARCH_ERROR", userUuid, err)
 		sendSideTextHistoryJson, _ := json.Marshal(sendSideTextHistory)
-		common.Sendmessage(connect, sendSideTextHistoryJson)
+		common.Sendmessage(connCore, sendSideTextHistoryJson)
 		return err
 	}
 
@@ -105,23 +105,27 @@ func Getsidetexthistory(connect *websocket.Conn, msg []byte, loginUuid string) e
 			// log.Printf("hit : %+v\n", hit)
 			// Deserialize hit.Source into a Tweet (could also be just a map[string]interface{}).
 			var chatHistory common.Chathistory
-
-			var chatMessage socket.Chatmessage
 			err := json.Unmarshal(hit.Source, &chatHistory)
 			if err != nil {
 				// Deserialization failed
 			}
-
 			// Work with tweet
 			// log.Printf("ChatMessage : %+v\n", chatHistory)
 
-			chatMessage.Historyuuid = chatHistory.Historyuuid
-			chatMessage.From.Useruuid = chatHistory.Myuuid
-			chatMessage.From.Platformuuid = chatHistory.Myplatformuuid
-			chatMessage.From.Platform = chatHistory.Myplatform
-			chatMessage.Stamp = chatHistory.Stamp
-			chatMessage.Message = chatHistory.Message
-			chatMessage.Style = chatHistory.Style
+			fromUserPlatform := socket.Userplatform{
+				Useruuid:     chatHistory.Myuuid,
+				Platformuuid: chatHistory.Myplatformuuid,
+				Platform:     chatHistory.Myplatform,
+			}
+			chatMessage := socket.Chatmessage{
+				Historyuuid:        chatHistory.Historyuuid,
+				From:               fromUserPlatform,
+				Stamp:              chatHistory.Stamp,
+				Message:            chatHistory.Message,
+				Style:              chatHistory.Style,
+				Ip:                 chatHistory.Ip,
+				Forwardchatmessage: chatHistory.Forwardchatmessage,
+			}
 
 			chatHistoryList = append(chatHistoryList, chatMessage)
 
@@ -140,7 +144,7 @@ func Getsidetexthistory(connect *websocket.Conn, msg []byte, loginUuid string) e
 	sendSideTextHistory.Payload.Chattarget = targetSideTextUser.Userplatform.Useruuid
 
 	sendSideTextHistoryJson, _ := json.Marshal(sendSideTextHistory)
-	common.Sendmessage(connect, sendSideTextHistoryJson)
+	common.Sendmessage(connCore, sendSideTextHistoryJson)
 
 	return nil
 }
