@@ -314,6 +314,7 @@ type Cmd_r_player_enter_room_batch struct {
 	Payload []struct {
 		Result      string      `json:"result"`
 		Roominfo    Roominfo    `json:"roomInfo"`
+		Newmessage []Chatmessage `json:"newMessage"`
 		Lastmessage Chatmessage `json:"lastMessage"`
 		Membercount int         `json:"memberCount"`
 	} `json:"payload"`

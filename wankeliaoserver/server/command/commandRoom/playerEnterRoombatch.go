@@ -1,11 +1,15 @@
 package commandRoom
 
 import (
+	"context"
 	"encoding/json"
+	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/olivere/elastic"
 
 	"../../common"
 	"../../socket"
@@ -22,7 +26,6 @@ func Playerenterroombatch(connCore common.Conncore, msg []byte, loginUuid string
 	userPlatform := client.Userplatform
 	userInfo, _ := common.Usersinforead(userPlatform.Useruuid)
 	userUuid := userPlatform.Useruuid
-	
 
 	var packetEnterRoomBatch socket.Cmd_c_player_enter_room_batch
 	if err := json.Unmarshal([]byte(msg), &packetEnterRoomBatch); err != nil {
@@ -44,19 +47,23 @@ func Playerenterroombatch(connCore common.Conncore, msg []byte, loginUuid string
 	}
 
 	roomBatchrResult := []struct {
-		Result      string             `json:"result"`
-		Roominfo    socket.Roominfo    `json:"roomInfo"`
-		Lastmessage socket.Chatmessage `json:"lastMessage"`
-		Membercount int                `json:"memberCount"`
+		Result      string               `json:"result"`
+		Roominfo    socket.Roominfo      `json:"roomInfo"`
+		Newmessage  []socket.Chatmessage `json:"newMessage"`
+		Lastmessage socket.Chatmessage   `json:"lastMessage"`
+		Membercount int                  `json:"memberCount"`
 	}{}
 
 	for key, roomCore := range packetEnterRoomBatch.Payload {
 		roomBatchrResult = append(roomBatchrResult, struct {
-			Result      string             `json:"result"`
-			Roominfo    socket.Roominfo    `json:"roomInfo"`
-			Lastmessage socket.Chatmessage `json:"lastMessage"`
-			Membercount int                `json:"memberCount"`
+			Result      string               `json:"result"`
+			Roominfo    socket.Roominfo      `json:"roomInfo"`
+			Newmessage  []socket.Chatmessage `json:"newMessage"`
+			Lastmessage socket.Chatmessage   `json:"lastMessage"`
+			Membercount int                  `json:"memberCount"`
 		}{})
+
+		// log.Printf("roomBatchrResult : %+v\n", roomBatchrResult)
 
 		roomType := roomCore.Roomtype
 		roomUuid := roomCore.Roomuuid
@@ -105,17 +112,59 @@ func Playerenterroombatch(connCore common.Conncore, msg []byte, loginUuid string
 			continue
 		}
 
-		common.Clientsroominsert(loginUuid, roomUuid, socket.Roomcore{Roomuuid: roomInfo.Roomcore.Roomuuid, Roomtype: roomInfo.Roomcore.Roomtype})
+		common.Clientsroominsert(loginUuid, roomUuid, socket.Roomcore{Roomuuid: roomUuid, Roomtype: roomType})
 
-		lastMessage := common.Hierarchyroomlastmessage(loginUuid, userUuid, roomInfo.Roomcore)
+		lastMessage := common.Hierarchyroomlastmessage(loginUuid, userUuid, roomCore)
 
 		if roomInfo.Roomicon != "" {
 			roomInfo.Roomicon = os.Getenv("linkPath") + roomInfo.Roomicon
 		}
 
+		oldLastMessageUuid := common.Getredisroomlastseen(roomType + "_" + roomUuid + "_" + userUuid)
+		if oldLastMessageUuid == "" {
+			oldLastMessageUuid = common.Getid().Hexstring()
+		}
+
+		boolQ := elastic.NewBoolQuery()
+		boolQ.Filter(elastic.NewMatchQuery("chatTarget", roomUuid))
+		boolQ.Filter(elastic.NewRangeQuery("historyUuid").Gt(oldLastMessageUuid))
+		searchResult, err := common.Elasticclient.Search(strings.ToLower(os.Getenv(roomType))).Query(boolQ).Sort("historyUuid", false).Do(context.Background())
+
+		log.Printf("chatTarget : %+v\n", roomUuid)
+		log.Printf("oldLastMessageUuid : %+v\n", oldLastMessageUuid)
+		log.Printf("strings.ToLower(os.Getenv(roomType)) : %+v\n", strings.ToLower(os.Getenv(roomType)))
+		log.Printf("searchResult.Hits.Hits : %+v\n", searchResult.Hits.Hits)
+
+		if err != nil {
+			roomBatchrResult[key].Result = common.Exception("COMMAND_PLAYERENTERROOMBATCH_SEARCH_ERROR", userUuid, err).Message
+		}
+
+		roomBatchrResult[key].Newmessage = []socket.Chatmessage{}
+
+		for _, hit := range searchResult.Hits.Hits {
+			var chatHistory common.Chathistory
+			_ = json.Unmarshal(hit.Source, &chatHistory)
+
+			chatMessage := socket.Chatmessage{
+				Historyuuid: chatHistory.Historyuuid,
+				From: socket.Userplatform{
+					Useruuid:     chatHistory.Myuuid,
+					Platformuuid: chatHistory.Myplatformuuid,
+					Platform:     chatHistory.Myplatform,
+				},
+				Stamp:   chatHistory.Stamp,
+				Message: chatHistory.Message,
+				Style:   chatHistory.Style,
+				Ip:      chatHistory.Ip,
+			}
+			roomBatchrResult[key].Newmessage = append(roomBatchrResult[key].Newmessage, chatMessage)
+		}
+
 		roomBatchrResult[key].Lastmessage = lastMessage
 		roomBatchrResult[key].Roominfo = roomInfo
 		roomBatchrResult[key].Membercount = memberCount
+
+		log.Printf("roomBatchrResult[key] : %+v\n", roomBatchrResult[key])
 	}
 
 	sendEnterRoomBatch.Base_R.Result = "ok"

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"math/rand"
-	"log"
 
 	"math"
 	"os"
@@ -277,7 +276,7 @@ func globalMessageBroadcast(station string, msg string) {
 	sendBroadcastJson, _ := json.Marshal(sendBroadcast)
 
 	connArray := copyAllConn()
-	log.Printf("connArray count : %+v\n", len(connArray))
+	// log.Printf("connArray count : %+v\n", len(connArray))
 	for _, conn := range connArray {
 		Sendmessage(conn, sendBroadcastJson)
 	}
