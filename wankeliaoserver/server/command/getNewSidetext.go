@@ -23,7 +23,6 @@ func Getnewsidetext(connCore common.Conncore, msg []byte, loginUuid string) erro
 	client, _ := common.Clientsread(loginUuid)
 	userPlatform := client.Userplatform
 	userUuid := userPlatform.Useruuid
-	
 
 	var packetNewSidetext socket.Cmd_c_get_new_side_text
 
@@ -71,27 +70,8 @@ func Getnewsidetext(connCore common.Conncore, msg []byte, loginUuid string) erro
 
 		var newSidetext socket.Newsidetext
 		newSidetext.Targetuserplatform = sideText.Userplatform
-		newSidetext.Message = []socket.Chatmessage{}
+		newSidetext.Newmessagecount = strconv.FormatInt(searchResult.Hits.TotalHits.Value, 10)
 		newSidetext.Lastmessage = common.Hierarchysidetextlastmessage(loginUuid, userUuid, sideText.Sidetextuuid)
-
-		for _, hit := range searchResult.Hits.Hits {
-			var chatHistory common.Chathistory
-			_ = json.Unmarshal(hit.Source, &chatHistory)
-
-			chatMessage := socket.Chatmessage{
-				Historyuuid: chatHistory.Historyuuid,
-				From: socket.Userplatform{
-					Useruuid:     chatHistory.Myuuid,
-					Platformuuid: chatHistory.Myplatformuuid,
-					Platform:     chatHistory.Myplatform,
-				},
-				Stamp:   chatHistory.Stamp,
-				Message: chatHistory.Message,
-				Style:   chatHistory.Style,
-				Ip:      chatHistory.Ip,
-			}
-			newSidetext.Message = append(newSidetext.Message, chatMessage)
-		}
 
 		newSidetextList = append(newSidetextList, newSidetext)
 	}

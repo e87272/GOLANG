@@ -100,9 +100,9 @@ type Roomstation struct {
 }
 
 type Newsidetext struct {
-	Targetuserplatform Userplatform  `json:"targetUserPlatform"`
-	Message            []Chatmessage `json:"message"`
-	Lastmessage        Chatmessage   `json:"lastMessage"`
+	Targetuserplatform Userplatform `json:"targetUserPlatform"`
+	Newmessagecount    string       `json:"newMessageCount"`
+	Lastmessage        Chatmessage  `json:"lastMessage"`
 }
 
 type Friendplatform struct {

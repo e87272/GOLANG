@@ -312,11 +312,11 @@ type Cmd_r_target_add_room_batch struct {
 type Cmd_r_player_enter_room_batch struct {
 	Base_R
 	Payload []struct {
-		Result      string      `json:"result"`
-		Roominfo    Roominfo    `json:"roomInfo"`
-		Newmessage []Chatmessage `json:"newMessage"`
-		Lastmessage Chatmessage `json:"lastMessage"`
-		Membercount int         `json:"memberCount"`
+		Result          string      `json:"result"`
+		Roominfo        Roominfo    `json:"roomInfo"`
+		Newmessagecount string      `json:"newMessageCount"`
+		Lastmessage     Chatmessage `json:"lastMessage"`
+		Membercount     int         `json:"memberCount"`
 	} `json:"payload"`
 }
 

@@ -3,7 +3,6 @@ package commandRoom
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -47,20 +46,20 @@ func Playerenterroombatch(connCore common.Conncore, msg []byte, loginUuid string
 	}
 
 	roomBatchrResult := []struct {
-		Result      string               `json:"result"`
-		Roominfo    socket.Roominfo      `json:"roomInfo"`
-		Newmessage  []socket.Chatmessage `json:"newMessage"`
-		Lastmessage socket.Chatmessage   `json:"lastMessage"`
-		Membercount int                  `json:"memberCount"`
+		Result          string             `json:"result"`
+		Roominfo        socket.Roominfo    `json:"roomInfo"`
+		Newmessagecount string             `json:"newMessageCount"`
+		Lastmessage     socket.Chatmessage `json:"lastMessage"`
+		Membercount     int                `json:"memberCount"`
 	}{}
 
 	for key, roomCore := range packetEnterRoomBatch.Payload {
 		roomBatchrResult = append(roomBatchrResult, struct {
-			Result      string               `json:"result"`
-			Roominfo    socket.Roominfo      `json:"roomInfo"`
-			Newmessage  []socket.Chatmessage `json:"newMessage"`
-			Lastmessage socket.Chatmessage   `json:"lastMessage"`
-			Membercount int                  `json:"memberCount"`
+			Result          string             `json:"result"`
+			Roominfo        socket.Roominfo    `json:"roomInfo"`
+			Newmessagecount string             `json:"newMessageCount"`
+			Lastmessage     socket.Chatmessage `json:"lastMessage"`
+			Membercount     int                `json:"memberCount"`
 		}{})
 
 		// log.Printf("roomBatchrResult : %+v\n", roomBatchrResult)
@@ -130,41 +129,21 @@ func Playerenterroombatch(connCore common.Conncore, msg []byte, loginUuid string
 		boolQ.Filter(elastic.NewRangeQuery("historyUuid").Gt(oldLastMessageUuid))
 		searchResult, err := common.Elasticclient.Search(strings.ToLower(os.Getenv(roomType))).Query(boolQ).Sort("historyUuid", false).Do(context.Background())
 
-		log.Printf("chatTarget : %+v\n", roomUuid)
-		log.Printf("oldLastMessageUuid : %+v\n", oldLastMessageUuid)
-		log.Printf("strings.ToLower(os.Getenv(roomType)) : %+v\n", strings.ToLower(os.Getenv(roomType)))
-		log.Printf("searchResult.Hits.Hits : %+v\n", searchResult.Hits.Hits)
+		// log.Printf("chatTarget : %+v\n", roomUuid)
+		// log.Printf("oldLastMessageUuid : %+v\n", oldLastMessageUuid)
+		// log.Printf("strings.ToLower(os.Getenv(roomType)) : %+v\n", strings.ToLower(os.Getenv(roomType)))
+		// log.Printf("searchResult.Hits.Hits : %+v\n", searchResult.Hits.Hits)
 
 		if err != nil {
 			roomBatchrResult[key].Result = common.Exception("COMMAND_PLAYERENTERROOMBATCH_SEARCH_ERROR", userUuid, err).Message
 		}
 
-		roomBatchrResult[key].Newmessage = []socket.Chatmessage{}
-
-		for _, hit := range searchResult.Hits.Hits {
-			var chatHistory common.Chathistory
-			_ = json.Unmarshal(hit.Source, &chatHistory)
-
-			chatMessage := socket.Chatmessage{
-				Historyuuid: chatHistory.Historyuuid,
-				From: socket.Userplatform{
-					Useruuid:     chatHistory.Myuuid,
-					Platformuuid: chatHistory.Myplatformuuid,
-					Platform:     chatHistory.Myplatform,
-				},
-				Stamp:   chatHistory.Stamp,
-				Message: chatHistory.Message,
-				Style:   chatHistory.Style,
-				Ip:      chatHistory.Ip,
-			}
-			roomBatchrResult[key].Newmessage = append(roomBatchrResult[key].Newmessage, chatMessage)
-		}
-
+		roomBatchrResult[key].Newmessagecount = strconv.FormatInt(searchResult.Hits.TotalHits.Value, 10)
 		roomBatchrResult[key].Lastmessage = lastMessage
 		roomBatchrResult[key].Roominfo = roomInfo
 		roomBatchrResult[key].Membercount = memberCount
 
-		log.Printf("roomBatchrResult[key] : %+v\n", roomBatchrResult[key])
+		// log.Printf("roomBatchrResult[key] : %+v\n", roomBatchrResult[key])
 	}
 
 	sendEnterRoomBatch.Base_R.Result = "ok"
