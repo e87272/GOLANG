@@ -1,0 +1,171 @@
+* {
+	position: relative;
+	box-sizing: border-box;
+	flex: 0 0 auto;
+}
+
+html {
+	height: 100%;
+	background: #FFF;
+	font-family: 'Menlo', 'Consolas', 'Microsoft JhengHei', sans-serif;
+	overflow: hidden;
+}
+
+body {
+	box-sizing: content-box;
+	height: 100%;
+	margin: -1px;
+	padding: 1px;
+}
+
+.body {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.frame {
+	min-width: 160px;
+	min-height: 160px;
+	border: inset 1px #CCC;
+}
+
+.frame>.body {
+	padding: 4px 8px;
+}
+
+.frameset {
+	display: flex;
+	min-width: 160px;
+	min-height: 160px;
+}
+
+.frameset.row {
+	width: 100%;
+	flex-direction: row;
+}
+
+.frameset.col {
+	height: 100%;
+	flex-direction: column;
+}
+
+.frameset>div:first-child {
+	flex: 0 1 auto;
+}
+
+.frameset>div:last-child {
+	flex: 1 0 auto;
+}
+
+.frameset.row>* {
+	height: 100%;
+}
+
+.frameset.col>* {
+	width: 100%;
+}
+
+.frameset>hr {
+	border: none;
+	z-index: 10000;
+}
+
+.frameset.row>hr {
+	width: 0;
+	margin: 0 -4px;
+	padding: 0 4px;
+	cursor: col-resize;
+}
+
+.frameset.col>hr {
+	height: 0;
+	margin: -4px 0;
+	padding: 4px 0;
+	cursor: row-resize;
+}
+
+.frameset>hr:hover {
+	z-index: 20000;
+}
+
+.frameset>hr:active {
+	position: fixed;
+	left: 0;
+	top: 0;
+	width: 100vw;
+	height: 100vh;
+	margin: 0;
+	padding: 0;
+}
+
+#MenuFrame {
+	background: #FFE;
+}
+
+#MenuBody {
+	overflow: auto;
+}
+
+#Menu {
+	display: inline-block;
+	min-width: 100%;
+}
+
+.item {
+	padding: 2px 4px;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.item:hover {
+	background: #C84;
+	color: #FFF;
+}
+
+#InputFrame {
+	background: #EEF;
+}
+
+#InputBody {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+#Input {
+	width: 100%;
+	flex: 1 0 0;
+	resize: none;
+	margin: 4px 0;
+	outline: none;
+	white-space: pre;
+	tab-size: 4;
+}
+
+#OutputFrame {
+	background: #EFD;
+}
+
+#OutputBody {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+#OutputBox {
+	width: 100%;
+	flex: 1 0 0;
+	background: #FFF;
+	border: solid 1px #BBB;
+	margin: 4px 0;
+	padding: 2px;
+	overflow: auto;
+}
+
+#Output {
+	white-space: pre;
+	tab-size: 4;
+}

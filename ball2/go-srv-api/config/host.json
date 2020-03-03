@@ -1,0 +1,15 @@
+{
+	"goServerApiPort": ":8787",
+	"elasticSearchHost": "http://192.168.1.231:9200",
+	"redisHost": "192.168.1.231:6379",
+	"cdnHost": "http://192.168.1.232/cdn/",
+	"dbHost": "192.168.1.231:3306",
+	"dbAccount": "team2",
+	"dbPassword": "team2team2",
+	"sysLog": "apisyslog",
+	"sysErrorLog": "apisyserrorlog",
+	"sessionKey": "RlGc2YvVjyay8Zvs",
+	"aesKey": "TKM6F4LIcdoHmfSq",
+	"appKey": "25wehl3u2702w",
+	"appSecret": "NP0AYBrF4si"
+}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html spellcheck="false">
+
+<head>
+	<meta charset="utf-8">
+	<title>API 測試</title>
+	<link rel="stylesheet" href="https://necolas.github.io/normalize.css/latest/normalize.css">
+	<link rel="stylesheet" href="apiTest.css">
+</head>
+
+<body>
+	<div class="body frameset row">
+		<div class="frame" id="MenuFrame" style="width: 300px;">
+			<div class="body" id="MenuBody">
+				<div id="Menu"></div>
+			</div>
+		</div>
+		<hr>
+		<div class="frameset col">
+			<div class="frame" id="InputFrame" style="height: 300px;">
+				<div class="body" id="InputBody">
+					<div>要發送的封包：</div>
+					<textarea id="Input"></textarea>
+					<button id="SendBtn">Send</button>
+				</div>
+			</div>
+			<hr>
+			<div class="frame" id="OutputFrame">
+				<div class="body" id="OutputBody">
+					<div>接收到的封包：</div>
+					<div id="OutputBox">
+						<div id="Output"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script src="apiTestSet.js"></script>
+	<script src="apiTest.js"></script>
+</body>
+
+</html>
