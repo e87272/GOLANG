@@ -1,0 +1,8 @@
+{
+	"goCdnPort": "#{goCdnDataPort}",
+	"elasticSearchHost": "#{elasticSearchHost}",
+	"sysLog": "cdnsyslog",
+	"sysErrorLog": "cdnsyserrorlog",
+	"cdnLocalPath": "#{cdnLocalPath}",
+	"cdnHost": "#{cdnHost}"
+}

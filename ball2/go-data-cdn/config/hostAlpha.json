@@ -1,0 +1,8 @@
+{
+	"goCdnPort": ":8877",
+	"elasticSearchHost": "http://192.168.1.231:9200",
+	"sysLog": "cdnsyslog",
+	"sysErrorLog": "cdnsyserrorlog",
+	"cdnLocalPath": "/usr/local/app-ball2/cdn",
+	"cdnHost": "http: //192.168.1.232/cdn"
+}
