@@ -1,0 +1,14 @@
+{
+	"namiApi": "https://open.sportnanoapi.com/api/sports/football",
+	"namiCdn": "https://cdn.sportnanoapi.com/football/",
+	"cdnApi": "http://192.168.1.232:8877",
+	"goServerAdaptorPort": ":9999",
+	"elasticSearchHost": "http://192.168.1.231:9200",
+	"redisHost": "192.168.1.231:6379",
+	"dbHost": "192.168.1.231:3306",
+	"dbAccount": "team2",
+	"dbPassword": "team2team2",
+	"sysLog": "datasyslog",
+	"sysErrorLog": "datasyserrorlog",
+	"aesKey": "TKM6F4LIcdoHmfSq"
+}
