@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"../../common"
-	"../../database"
-	"../../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func Roomadminremove(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -34,7 +34,7 @@ func Roomadminremove(connCore common.Conncore, msg []byte, loginUuid string) err
 	}
 	sendRoomAdminRemove.Base_R.Idem = packetRoomAdminAdd.Base_C.Idem
 
-	if loginUuid == userUuid {
+	if loginUuid == userUuid && false {
 		//block處理
 		sendRoomAdminRemove.Base_R.Result = "err"
 		sendRoomAdminRemove.Base_R.Exp = common.Exception("COMMAND_ROOMADMINADD_GUEST", userUuid, nil)

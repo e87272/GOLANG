@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"../../common"
-	"../../database"
-	"../../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func Getmemberlist(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -36,7 +36,7 @@ func Getmemberlist(connCore common.Conncore, msg []byte, loginUuid string) error
 	}
 	sendMemberList.Base_R.Idem = packetGetMemberList.Base_C.Idem
 
-	if loginUuid == userUuid {
+	if loginUuid == userUuid && false {
 		//block處理
 		sendMemberList.Base_R.Result = "err"
 		sendMemberList.Base_R.Exp = common.Exception("COMMAND_GETFRIENDLIST_GUEST", userUuid, nil)

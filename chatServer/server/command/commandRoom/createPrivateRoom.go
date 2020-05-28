@@ -10,9 +10,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"../../common"
-	"../../database"
-	"../../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func Createprivateroom(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -41,7 +41,7 @@ func Createprivateroom(connCore common.Conncore, msg []byte, loginUuid string) e
 	}
 	sendCreatePrivateRoom.Base_R.Idem = packetCreatePrivateRoom.Base_C.Idem
 
-	if loginUuid == userUuid {
+	if loginUuid == userUuid && false {
 		//block處理
 		sendCreatePrivateRoom.Base_R.Result = "err"
 		sendCreatePrivateRoom.Base_R.Exp = common.Exception("COMMAND_CREATEPRIVATEROOM_GUEST", userUuid, nil)

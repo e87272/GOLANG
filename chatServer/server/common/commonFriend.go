@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"../socket"
+	"server/socket"
 )
 
 func Updatefriendstate(dataJson string) {

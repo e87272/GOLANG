@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"../socket"
+	"server/socket"
 )
 
 var mutexClientMsgList = new(sync.Mutex)

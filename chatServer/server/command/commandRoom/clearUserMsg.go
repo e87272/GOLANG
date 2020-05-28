@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"../../common"
-	"../../socket"
+	"server/common"
+	"server/socket"
 	"github.com/olivere/elastic"
 )
 
@@ -35,7 +35,7 @@ func Clearusermsg(connCore common.Conncore, msg []byte, loginUuid string) error 
 	}
 	sendClearUserMsg.Base_R.Idem = packetClearUserMsg.Base_C.Idem
 
-	if loginUuid == userUuid {
+	if loginUuid == userUuid && false {
 		//block處理
 		sendClearUserMsg.Base_R.Result = "err"
 		sendClearUserMsg.Base_R.Exp = common.Exception("COMMAND_CLEARUSERMSG_GUEST", userUuid, nil)

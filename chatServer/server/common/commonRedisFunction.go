@@ -2,8 +2,9 @@ package common
 
 import (
 	"encoding/json"
+	"context"
 
-	"../socket"
+	"server/socket"
 )
 
 func Redispubdata(redisIndex string, pubDataJson string) {
@@ -11,8 +12,9 @@ func Redispubdata(redisIndex string, pubDataJson string) {
 	//加鎖 加鎖 加鎖
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-
-	err := Redisclient.Publish(redisIndex, pubDataJson).Err()
+	
+	ctx := context.Background()
+	err := Redisclient.Publish(ctx,redisIndex, pubDataJson).Err()
 
 	if err != nil {
 		Essyserrorlog("COMMON_REDISPUBDATA_REDIS_ERROR", "redisIndex : "+redisIndex+"   pubDataJson : "+pubDataJson, err)

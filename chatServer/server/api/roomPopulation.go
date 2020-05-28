@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"../common"
+	"server/common"
 )
 
 func roomPopulation(w http.ResponseWriter, r *http.Request) {

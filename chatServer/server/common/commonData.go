@@ -6,7 +6,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/olivere/elastic"
 
-	"../socket"
+	"server/socket"
 )
 
 var Elasticclient *elastic.Client

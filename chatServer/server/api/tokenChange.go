@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"../common"
-	"../database"
+	"server/common"
+	"server/database"
 )
 
 func tokenChange(w http.ResponseWriter, r *http.Request) {

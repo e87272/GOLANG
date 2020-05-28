@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"../common"
-	"../socket"
+	"server/common"
+	"server/socket"
 )
 
 func Messageseen(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -32,7 +32,7 @@ func Messageseen(connCore common.Conncore, msg []byte, loginUuid string) error {
 	}
 	sendMessageSeen.Base_R.Idem = packetMessageSeen.Base_C.Idem
 
-	if loginUuid == userUuid {
+	if loginUuid == userUuid && false {
 		//block處理
 		sendMessageSeen.Base_R.Result = "err"
 		sendMessageSeen.Base_R.Exp = common.Exception("COMMAND_MESSAGESEEN_GUEST", userUuid, nil)

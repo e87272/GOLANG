@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"../common"
-	"../database"
-	"../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func sendGift(w http.ResponseWriter, r *http.Request) {

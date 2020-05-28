@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"../../common"
-	"../../database"
-	"../../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func Blockroomchat(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -33,7 +33,7 @@ func Blockroomchat(connCore common.Conncore, msg []byte, loginUuid string) error
 	}
 	sendChatblock.Base_R.Idem = packetChatBlock.Base_C.Idem
 
-	if loginUuid == userUuid {
+	if loginUuid == userUuid && false {
 		//block處理
 		sendChatblock.Base_R.Result = "err"
 		sendChatblock.Base_R.Exp = common.Exception("COMMAND_BLOCKROOMCHAT_GUEST", userUuid, nil)

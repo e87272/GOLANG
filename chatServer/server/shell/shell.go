@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"strings"
 
-	"../common"
-	"../socket"
+	"server/common"
+	"server/socket"
 )
 
 func Shell(connCore common.Conncore, loginUuid string, userPlatform socket.Userplatform, packetSendShell socket.Cmd_c_player_send_shell, timeUnix string) error {

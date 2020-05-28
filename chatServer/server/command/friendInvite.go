@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"../common"
-	"../database"
-	"../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func Friendinvite(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -33,7 +33,7 @@ func Friendinvite(connCore common.Conncore, msg []byte, loginUuid string) error 
 	}
 	sendInvite.Base_R.Idem = packetInvite.Base_C.Idem
 
-	if loginUuid == userUuid {
+	if loginUuid == userUuid && false {
 		sendInvite.Base_R.Result = "err"
 		sendInvite.Base_R.Exp = common.Exception("COMMAND_FRIENDINVITE_GUEST", userUuid, nil)
 		sendInviteJson, _ := json.Marshal(sendInvite)

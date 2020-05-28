@@ -7,9 +7,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"../common"
-	"../database"
-	"../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func linkProclamation(connCore common.Conncore, userPlatform socket.Userplatform, packetSendMsg socket.Cmd_c_player_send_shell, timeUnix string) error {

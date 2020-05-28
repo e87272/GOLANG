@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"../common"
+	"server/common"
 )
 
 func serverAliveList(w http.ResponseWriter, r *http.Request) {

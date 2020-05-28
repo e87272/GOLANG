@@ -3,8 +3,8 @@ package common
 import (
 	"encoding/json"
 
-	"../database"
-	"../socket"
+	"server/database"
+	"server/socket"
 )
 
 func Sidetextsend(userUuid string, targetUuid string, msg []byte) {

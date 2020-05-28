@@ -15,12 +15,12 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/olivere/elastic"
 
-	"./api"
-	"./command"
-	"./command/commandRoom"
-	"./common"
-	"./database"
-	"./socket"
+	"server/api"
+	"server/command"
+	"server/command/commandRoom"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func main() {
@@ -115,11 +115,11 @@ func main() {
 	http.HandleFunc("/echo", echoHandler)
 
 	http.ListenAndServe(os.Getenv("imServerPort"), nil)
-
+	panic(http.ListenAndServe(os.Getenv("imServerPort"), nil))
 }
 
 func fileUnitTestHandler(w http.ResponseWriter, r *http.Request) {
-	// log.Println("r.URL.Path :", r.URL.Path)
+	log.Println("r.URL.Path :", r.URL.Path)
 	http.ServeFile(w, r, ".."+r.URL.Path)
 }
 
@@ -127,7 +127,7 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 
 	loginUuid := common.Getid().Hexstring()
 
-	// log.Printf("loginUuid : %s \n", loginUuid)
+	log.Printf("loginUuid : %s \n", loginUuid)
 	upgrader := &websocket.Upgrader{
 		//如果有 cross domain 的需求，可加入這個，不檢查 cross domain
 		CheckOrigin: func(r *http.Request) bool { return true },
@@ -140,10 +140,10 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-	// log.Printf("http.Request Header X-Forwarded-For : %+v\n", r.Header["X-Forwarded-For"])
-	// log.Printf("http.Request Header : %+v\n", r.Header)
-	// log.Printf("http.Request Header Connection : %+v\n", r.Header["Connection"])
+	/*
+	log.Printf("http.Request Header X-Forwarded-For : %+v\n", r.Header["X-Forwarded-For"])
+	log.Printf("http.Request Header : %+v\n", r.Header)
+	log.Printf("http.Request Header Connection : %+v\n", r.Header["Connection"])
 	//不安全可能被客端竄改還需修改
 	if len(r.Header["X-Forwarded-For"]) == 0 {
 		common.Essyserrorlog("MAIN_ECHOHANDLER_IP_ERROR", loginUuid, err)
@@ -151,7 +151,7 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.Iplistinsert(loginUuid, r.Header["X-Forwarded-For"][0])
-
+	*/
 	defer func() {
 		// log.Printf("defer : %+v\n", loginUuid)
 
@@ -190,7 +190,7 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// connect.Close()
-		// log.Printf("connect : close - %s \n", loginUuid)
+		log.Printf("connect : close - %s \n", loginUuid)
 	}()
 
 	connCore := common.Conncore{Conn: connect, Connmutex: new(sync.Mutex)}
@@ -198,14 +198,14 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 	for {
 		err = receivePacketHandle(connCore, loginUuid)
 		if err != nil {
-			// log.Println("echoHandler write:", err)
+			log.Println("echoHandler write:", err)
 			break
 		}
 	}
 }
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
-	// log.Println(r.URL)
+	log.Println(r.URL)
 	if r.URL.Path != "/" {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -214,7 +214,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	http.ServeFile(w, r, "../client/healthCheck.html")
+	http.ServeFile(w, r, "healthCheck.html")
 }
 
 func receivePacketHandle(connCore common.Conncore, loginUuid string) error {
@@ -226,7 +226,7 @@ func receivePacketHandle(connCore common.Conncore, loginUuid string) error {
 
 	_, msg, err := connCore.Conn.ReadMessage()
 	if err != nil {
-		// log.Printf("connect : %+v\n", err)
+		log.Printf("connect : %+v\n", err)
 		return err
 	}
 
@@ -237,7 +237,7 @@ func receivePacketHandle(connCore common.Conncore, loginUuid string) error {
 	var mapResult map[string]interface{}
 	//使用 json.Unmarshal(data []byte, v interface{})进行转换,返回 error 信息
 	if err := json.Unmarshal([]byte(msg), &mapResult); err != nil {
-		// log.Println("receivePacketHandle Unmarshal:", err)
+		log.Println("receivePacketHandle Unmarshal:", err)
 		return err
 	}
 
@@ -250,7 +250,7 @@ func receivePacketHandle(connCore common.Conncore, loginUuid string) error {
 
 	switch mapResult["cmd"] {
 	case socket.CMD_C_TOKEN_CHANGE:
-		// log.Printf("CMD_C_TOKEN_CHANGE : " + uuid)
+		log.Printf("CMD_C_TOKEN_CHANGE : " + loginUuid)
 		err = command.Tokenchange(connCore, msg, loginUuid)
 
 		if err != nil {

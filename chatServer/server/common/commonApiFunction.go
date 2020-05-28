@@ -15,7 +15,7 @@ import (
 	_ "net/http/pprof"
 	"net/url"
 
-	"../database"
+	"server/database"
 )
 
 var apiKeyList = map[string]string{}

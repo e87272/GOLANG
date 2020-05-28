@@ -9,8 +9,8 @@ import (
 
 	"github.com/olivere/elastic"
 
-	"../common"
-	"../socket"
+	"server/common"
+	"server/socket"
 )
 
 func Getnewsidetext(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -35,7 +35,7 @@ func Getnewsidetext(connCore common.Conncore, msg []byte, loginUuid string) erro
 	}
 	sendNewSideText.Base_R.Idem = packetNewSidetext.Base_C.Idem
 
-	if loginUuid == userUuid {
+	if loginUuid == userUuid && false {
 		//block處理
 		sendNewSideText.Base_R.Result = "err"
 		sendNewSideText.Base_R.Exp = common.Exception("COMMAND_GETNEWSIDETEXT_GUEST", userUuid, nil)
@@ -44,7 +44,7 @@ func Getnewsidetext(connCore common.Conncore, msg []byte, loginUuid string) erro
 		return nil
 	}
 
-	var newSidetextList []socket.Newsidetext
+	newSidetextList := []socket.Newsidetext{}
 
 	sideTextMap, ok := common.Clientssidetextmapread(loginUuid)
 	if !ok {
@@ -70,7 +70,7 @@ func Getnewsidetext(connCore common.Conncore, msg []byte, loginUuid string) erro
 
 		var newSidetext socket.Newsidetext
 		newSidetext.Targetuserplatform = sideText.Userplatform
-		newSidetext.Newmessagecount = strconv.FormatInt(searchResult.Hits.TotalHits.Value, 10)
+		newSidetext.Newmessagecount = strconv.FormatInt(searchResult.Hits.TotalHits, 10)
 		newSidetext.Lastmessage = common.Hierarchysidetextlastmessage(loginUuid, userUuid, sideText.Sidetextuuid)
 
 		newSidetextList = append(newSidetextList, newSidetext)

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"../database"
+	"server/database"
 )
 
 func Querydirtyword() {

@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"../common"
-	"../socket"
+	"server/common"
+	"server/socket"
 )
 
 func Playerlogout(connCore common.Conncore, msg []byte, loginUuid string) error {

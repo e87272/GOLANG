@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"../common"
-	"../database"
-	"../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func blockUser(connCore common.Conncore, userPlatform socket.Userplatform, packetSendMsg socket.Cmd_c_player_send_shell, timeUnix string) error {

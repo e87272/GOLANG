@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"../common"
+	"server/common"
 )
 
 func setLog(w http.ResponseWriter, r *http.Request) {

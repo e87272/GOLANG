@@ -2,16 +2,16 @@ package command
 
 import (
 	"encoding/json"
-
+	"log"
 	"os"
 	"strconv"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 
-	"../common"
-	"../database"
-	"../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func Tokenchange(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -31,6 +31,7 @@ func Tokenchange(connCore common.Conncore, msg []byte, loginUuid string) error {
 		common.Sendmessage(connCore, sendTokenChangeJson)
 		return err
 	}
+	log.Printf("packetToken : %+v\n", packetToken)
 	if packetToken.Payload.Platformuuid == "" || packetToken.Payload.Platform == "" || packetToken.Payload.Token == "" {
 		var user socket.User
 		user.Userplatform.Useruuid = loginUuid

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"../database"
-	"../socket"
+	"server/database"
+	"server/socket"
 )
 
 func Queryblocklist() {
@@ -111,6 +111,9 @@ func Checkblock(loginUuid string, roomUuid string, uuid string) bool {
 }
 
 func Checkadmin(roomUuid string, userUuid string, functionName string) bool {
+
+	return true
+	
 	role := Functionmanagementread(functionName)
 	roleAry := strings.Split(role, ",")
 	user, ok := Usersinforead(userUuid)

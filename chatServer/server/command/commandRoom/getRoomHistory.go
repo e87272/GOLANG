@@ -9,8 +9,8 @@ import (
 
 	"github.com/olivere/elastic"
 
-	"../../common"
-	"../../socket"
+	"server/common"
+	"server/socket"
 )
 
 func Getroomhistory(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -85,8 +85,8 @@ func Getroomhistory(connCore common.Conncore, msg []byte, loginUuid string) erro
 	}
 
 	// Here's how you iterate through results with full control over each step.
-	if searchResult.Hits.TotalHits.Value > 0 {
-		chatHistoryList := make([]socket.Chatmessage, 0, searchResult.Hits.TotalHits.Value)
+	if searchResult.Hits.TotalHits > 0 {
+		chatHistoryList := make([]socket.Chatmessage, 0, searchResult.Hits.TotalHits)
 
 		// Iterate through results
 		for _, hit := range searchResult.Hits.Hits {
@@ -94,7 +94,7 @@ func Getroomhistory(connCore common.Conncore, msg []byte, loginUuid string) erro
 			// log.Printf("hit : %+v\n", hit)
 			// Deserialize hit.Source into a Tweet (could also be just a map[string]interface{}).
 			var chatHistory common.Chathistory
-			err := json.Unmarshal(hit.Source, &chatHistory)
+			err := json.Unmarshal(*hit.Source, &chatHistory)
 			if err != nil {
 				// Deserialization failed
 			}
@@ -120,7 +120,7 @@ func Getroomhistory(connCore common.Conncore, msg []byte, loginUuid string) erro
 
 			historyUuid = chatHistory.Historyuuid
 		}
-		if searchResult.Hits.TotalHits.Value < int64(common.Maxchathistory) {
+		if searchResult.Hits.TotalHits < int64(common.Maxchathistory) {
 			historyUuid = startStampHex
 		}
 		sendRoomHistory.Payload.Message = chatHistoryList

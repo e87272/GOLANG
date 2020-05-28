@@ -7,9 +7,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"../../common"
-	"../../database"
-	"../../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func Playersendforwardmsg(connCore common.Conncore, msg []byte, loginUuid string) error {

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"../common"
-	"../shell"
-	"../socket"
+	"server/common"
+	"server/shell"
+	"server/socket"
 )
 
 func Playersendshell(connCore common.Conncore, msg []byte, loginUuid string) error {

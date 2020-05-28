@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"../common"
+	"server/common"
 )
 
 func roomPopulationList(w http.ResponseWriter, r *http.Request) {

@@ -9,8 +9,8 @@ import (
 
 	_ "net/http/pprof"
 
-	"../database"
-	"../socket"
+	"server/database"
+	"server/socket"
 )
 
 func Myiplastdigit() string {

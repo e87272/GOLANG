@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"../database"
-	"../socket"
+	"server/database"
+	"server/socket"
 )
 
 func Checkinroom(roomUuid string, uuid string) bool {

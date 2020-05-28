@@ -2,10 +2,10 @@ package common
 
 import (
 	"encoding/json"
-	
+	"context"
 	"time"
 
-	"../socket"
+	"server/socket"
 )
 
 var sideTextLastMessagePrefix string = "sidetext_lastMessage_"
@@ -29,7 +29,8 @@ var userTokenPrefix string = "userToken_"
 func Getredissidetextlastmessage(key string) (socket.Chatmessage, bool) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	result, err := Redisclient.Get(sideTextLastMessagePrefix + key).Result()
+	
+	result, err := Redisclient.Get(context.Background(),sideTextLastMessagePrefix + key).Result()
 	// log.Printf("Getredissidetextlastmessage key : %+v\n", key)
 	// log.Printf("Getredissidetextlastmessage result : %+v\n", result)
 	if err != nil {
@@ -50,13 +51,15 @@ func Setredissidetextlastmessage(key string, chatMessage socket.Chatmessage) {
 	//設0存永久
 	// log.Printf("Setredissidetextlastmessage string(chatMessageJson) : %+v\n", string(chatMessageJson))
 	// log.Printf("Setredissidetextlastmessage key : %+v\n", sideTextLastMessagePrefix+key)
-	Redisclient.Set(sideTextLastMessagePrefix+key, string(chatMessageJson), 30*24*time.Hour)
+	
+	Redisclient.Set(context.Background(),sideTextLastMessagePrefix+key, string(chatMessageJson), 30*24*time.Hour)
 }
 
 func Getredissidetextlastseen(key string) string {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	result, err := Redisclient.Get(sideTextLastSeenPrefix + key).Result()
+	
+	result, err := Redisclient.Get(context.Background(),sideTextLastSeenPrefix + key).Result()
 	// log.Printf("Getredissidetextlastseen key : %+v\n", key)
 	// log.Printf("Getredissidetextlastseen result : %+v\n", result)
 	if err != nil {
@@ -71,13 +74,15 @@ func Setredissidetextlastseen(key string, hsitoryUuid string) {
 	defer Mutexredis.Unlock()
 	// log.Printf("Setredissidetextlastseen key : %+v\n", sideTextLastSeenPrefix+key)
 	// log.Printf("Setredissidetextlastseen hsitoryUuid : %+v\n", sideTextLastSeenPrefix+key)
-	Redisclient.Set(sideTextLastSeenPrefix+key, hsitoryUuid, 30*24*time.Hour)
+	
+	Redisclient.Set(context.Background(),sideTextLastSeenPrefix+key, hsitoryUuid, 30*24*time.Hour)
 }
 
 func Getredisroomlastmessage(key string) (socket.Chatmessage, bool) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	result, err := Redisclient.Get(roomLastMessagePrefix + key).Result()
+	
+	result, err := Redisclient.Get(context.Background(),roomLastMessagePrefix + key).Result()
 	// log.Printf("Getredisroomlastmessage key : %+v\n", key)
 	// log.Printf("Getredisroomlastmessage result : %+v\n", result)
 	if err != nil {
@@ -98,13 +103,15 @@ func Setredisroomlastmessage(key string, chatMessage socket.Chatmessage) {
 	//設0存永久
 	// log.Printf("Setredisroomlastmessage string(chatMessageJson) : %+v\n", string(chatMessageJson))
 	// log.Printf("Setredisroomlastmessage key : %+v\n", roomLastMessagePrefix+key)
-	Redisclient.Set(roomLastMessagePrefix+key, string(chatMessageJson), 30*24*time.Hour)
+	
+	Redisclient.Set(context.Background(),roomLastMessagePrefix+key, string(chatMessageJson), 30*24*time.Hour)
 }
 
 func Getredisroomlastseen(key string) string {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	result, err := Redisclient.Get(roomLastSeenPrefix + key).Result()
+	
+	result, err := Redisclient.Get(context.Background(),roomLastSeenPrefix + key).Result()
 	// log.Printf("Getredisroomlastseen key : %+v\n", key)
 	// log.Printf("Getredisroomlastseen result : %+v\n", result)
 	if err != nil {
@@ -119,13 +126,15 @@ func Setredisroomlastseen(key string, hsitoryUuid string) {
 	defer Mutexredis.Unlock()
 	// log.Printf("Setredisroomlastseen key : %+v\n", roomLastSeenPrefix+key)
 	// log.Printf("Setredisroomlastseen hsitoryUuid : %+v\n", roomLastSeenPrefix+key)
-	Redisclient.Set(roomLastSeenPrefix+key, hsitoryUuid, 30*24*time.Hour)
+	
+	Redisclient.Set(context.Background(),roomLastSeenPrefix+key, hsitoryUuid, 30*24*time.Hour)
 }
 
 func Getredisfirstenterroom(key string) string {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	result, err := Redisclient.Get(firstenterroomPrefix + key).Result()
+	
+	result, err := Redisclient.Get(context.Background(),firstenterroomPrefix + key).Result()
 	// log.Printf("Getredisroomlastseen key : %+v\n", key)
 	// log.Printf("Getredisroomlastseen result : %+v\n", result)
 	if err != nil {
@@ -140,19 +149,21 @@ func Setredisfirstenterroom(key string, fromUuid string) {
 	defer Mutexredis.Unlock()
 	// log.Printf("Setredisroomlastseen key : %+v\n", roomLastSeenPrefix+key)
 	// log.Printf("Setredisroomlastseen hsitoryUuid : %+v\n", roomLastSeenPrefix+key)
-	Redisclient.Set(firstenterroomPrefix+key, fromUuid, 30*24*time.Hour)
+	
+	Redisclient.Set(context.Background(),firstenterroomPrefix+key, fromUuid, 30*24*time.Hour)
 }
 
 func Deleteredisfirstenterroom(key string) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	Redisclient.Del(firstenterroomPrefix + key)
+	Redisclient.Del(context.Background(),firstenterroomPrefix + key)
 }
 
 func Getredisroominfo(key string) (socket.Roominfo, bool) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	result, err := Redisclient.Get(roomInfoPrefix + key).Result()
+	
+	result, err := Redisclient.Get(context.Background(),roomInfoPrefix + key).Result()
 	if err != nil {
 		return socket.Roominfo{}, false
 	}
@@ -165,13 +176,14 @@ func Setredisroominfo(key string, roomInfo socket.Roominfo) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
 	roomInfoJson, _ := json.Marshal(roomInfo)
-	Redisclient.Set(roomInfoPrefix+key, roomInfoJson, 7*24*time.Hour)
+	
+	Redisclient.Set(context.Background(),roomInfoPrefix+key, roomInfoJson, 7*24*time.Hour)
 }
 
 func Getredisuserinfo(key string) (socket.User, bool) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	result, err := Redisclient.Get(userInfoPrefix + key).Result()
+	result, err := Redisclient.Get(context.Background(),userInfoPrefix + key).Result()
 	if err != nil {
 		return socket.User{}, false
 	}
@@ -184,17 +196,20 @@ func Setredisuserinfo(key string, userInfo socket.User) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
 	userInfoJson, _ := json.Marshal(userInfo)
-	Redisclient.Set(userInfoPrefix+key, userInfoJson, 7*24*time.Hour)
+	
+	Redisclient.Set(context.Background(),userInfoPrefix+key, userInfoJson, 7*24*time.Hour)
 }
 
 func Deleteredisuserinfo(key string) {
-	Redisclient.Del(userInfoPrefix+key)
+
+	Redisclient.Del(context.Background(),userInfoPrefix+key)
 }
 
 func Getredismembercount(key string) (int, bool) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	result, err := Redisclient.Get(memberCountPrefix + key).Result()
+	
+	result, err := Redisclient.Get(context.Background(),memberCountPrefix + key).Result()
 	if err != nil {
 		return 0, false
 	}
@@ -206,13 +221,15 @@ func Getredismembercount(key string) (int, bool) {
 func Setredismembercount(key string, count int) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	Redisclient.Set(memberCountPrefix+key, count, 7*24*time.Hour)
+	
+	Redisclient.Set(context.Background(),memberCountPrefix+key, count, 7*24*time.Hour)
 }
 
 func Getredisroomstation(key string) (string, bool) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	roomUuid, err := Redisclient.Get(roomStationPrefix + key).Result()
+	
+	roomUuid, err := Redisclient.Get(context.Background(),roomStationPrefix + key).Result()
 	if err != nil {
 		return "", false
 	}
@@ -226,13 +243,15 @@ func Setredisroomstation(key string, roomUuid string) {
 	defer Mutexredis.Unlock()
 	// log.Printf("Setredisroomstation key : %+v\n", key)
 	// log.Printf("Setredisroomstation roomUuid : %+v\n", roomUuid)
-	Redisclient.Set(roomStationPrefix+key, roomUuid, 7*24*time.Hour)
+	
+	Redisclient.Set(context.Background(),roomStationPrefix+key, roomUuid, 7*24*time.Hour)
 }
 
 func Getredisusertoken(key string) (string, bool) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	token, err := Redisclient.Get(userTokenPrefix + key).Result()
+	
+	token, err := Redisclient.Get(context.Background(),userTokenPrefix + key).Result()
 	if err != nil {
 		return "", false
 	}
@@ -242,5 +261,6 @@ func Getredisusertoken(key string) (string, bool) {
 func Setredisusertoken(key string, token string) {
 	Mutexredis.Lock()
 	defer Mutexredis.Unlock()
-	Redisclient.Set(userTokenPrefix+key, token, 30*24*time.Hour)
+	
+	Redisclient.Set(context.Background(),userTokenPrefix+key, token, 30*24*time.Hour)
 }

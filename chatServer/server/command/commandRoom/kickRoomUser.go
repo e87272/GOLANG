@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"../../common"
-	"../../database"
-	"../../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func Kickroomuser(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -34,7 +34,7 @@ func Kickroomuser(connCore common.Conncore, msg []byte, loginUuid string) error 
 	}
 	sendKickRoomUser.Base_R.Idem = packetKickRoomUser.Base_C.Idem
 
-	if loginUuid == userUuid {
+	if loginUuid == userUuid && false {
 		//block處理
 		sendKickRoomUser.Base_R.Result = "err"
 		sendKickRoomUser.Base_R.Exp = common.Exception("COMMAND_KICKROOMUSER_GUEST", userUuid, nil)

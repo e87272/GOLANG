@@ -2,11 +2,11 @@ package common
 
 import (
 	"encoding/json"
-
+	"context"
 	"strconv"
 	"time"
 
-	"../socket"
+	"server/socket"
 )
 
 func Subscriberoom() {
@@ -14,11 +14,12 @@ func Subscriberoom() {
 	// log.Printf("Subscriberoom \n")
 
 	//参数1 频道名 字符串类型
-	Redispubsub := Redisclient.Subscribe("room")
+	ctx := context.Background()
+	Redispubsub := Redisclient.Subscribe(ctx,"room")
 
 	defer Redispubsub.Close()
 
-	_, err := Redispubsub.Receive()
+	_, err := Redispubsub.Receive(ctx)
 	if err != nil {
 		// log.Printf("Subscriberoom err : %+v\n", err)
 		return
@@ -66,11 +67,12 @@ func Subscribeuser() {
 	// log.Printf("Subscriberoom \n")
 
 	//参数1 频道名 字符串类型
-	Redispubsub := Redisclient.Subscribe("user")
+	ctx := context.Background()
+	Redispubsub := Redisclient.Subscribe(ctx,"user")
 
 	defer Redispubsub.Close()
 
-	_, err := Redispubsub.Receive()
+	_, err := Redispubsub.Receive(ctx)
 	if err != nil {
 		// log.Printf("Subscribeuser err : %+v\n", err)
 		return
@@ -103,11 +105,12 @@ func Subscribeuser() {
 func Subscribesidetext() {
 
 	//参数1 频道名 字符串类型
-	Redispubsub := Redisclient.Subscribe("sideText")
+	ctx := context.Background()
+	Redispubsub := Redisclient.Subscribe(ctx,"sideText")
 
 	defer Redispubsub.Close()
 
-	_, err := Redispubsub.Receive()
+	_, err := Redispubsub.Receive(ctx)
 	if err != nil {
 
 		return
@@ -131,11 +134,12 @@ func Subscriberoomsinfo() {
 	// log.Printf("Subscriberoomsinfo \n")
 
 	//参数1 频道名 字符串类型
-	Redispubsub := Redisclient.Subscribe("roomsinfo")
+	ctx := context.Background()
+	Redispubsub := Redisclient.Subscribe(ctx,"roomsinfo")
 
 	defer Redispubsub.Close()
 
-	_, err := Redispubsub.Receive()
+	_, err := Redispubsub.Receive(ctx)
 	if err != nil {
 		// log.Printf("Subscriberoomsinfo err : %+v\n", err)
 		return
@@ -171,11 +175,12 @@ func Subscribesync() {
 	// log.Printf("Subscriberoomsinfo \n")
 
 	//参数1 频道名 字符串类型
-	Redispubsub := Redisclient.Subscribe("sync")
+	ctx := context.Background()
+	Redispubsub := Redisclient.Subscribe(ctx,"sync")
 
 	defer Redispubsub.Close()
 
-	_, err := Redispubsub.Receive()
+	_, err := Redispubsub.Receive(ctx)
 	if err != nil {
 		// log.Printf("Subscribesync err : %+v\n", err)
 		return
@@ -228,11 +233,12 @@ func Subscribesudoresult() {
 	// log.Printf("Subscribesudoresult \n")
 
 	//参数1 频道名 字符串类型
-	Redispubsub := Redisclient.Subscribe("sudoresult")
+	ctx := context.Background()
+	Redispubsub := Redisclient.Subscribe(ctx,"sudoresult")
 
 	defer Redispubsub.Close()
 
-	_, err := Redispubsub.Receive()
+	_, err := Redispubsub.Receive(ctx)
 	if err != nil {
 		// log.Printf("Subscribesudoresult err : %+v\n", err)
 		return

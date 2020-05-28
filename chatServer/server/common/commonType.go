@@ -3,7 +3,7 @@ package common
 import (
 	"sync"
 
-	"../socket"
+	"server/socket"
 	"github.com/gorilla/websocket"
 )
 

@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"../../common"
-	"../../database"
-	"../../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func Dismissroom(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -33,7 +33,7 @@ func Dismissroom(connCore common.Conncore, msg []byte, loginUuid string) error {
 	}
 	sendDisMissRoom.Base_R.Idem = packetDisMissRoom.Base_C.Idem
 
-	if loginUuid == userUuid {
+	if loginUuid == userUuid && false {
 		//block處理
 		sendDisMissRoom.Base_R.Result = "err"
 		sendDisMissRoom.Base_R.Exp = common.Exception("COMMAND_DISMISSROOM_GUEST", userUuid, nil)

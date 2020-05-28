@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"../common"
+	"server/common"
 )
 
 func roomProclamationSync(w http.ResponseWriter, r *http.Request) {

@@ -6,8 +6,8 @@ import (
 	"math/rand"
 	"net/http"
 
-	"../common"
-	"../database"
+	"server/common"
+	"server/database"
 )
 
 func createApiClient(w http.ResponseWriter, r *http.Request) {

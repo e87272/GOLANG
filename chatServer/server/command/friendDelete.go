@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"../common"
-	"../database"
-	"../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func Frienddelete(connCore common.Conncore, msg []byte, loginUuid string) error {

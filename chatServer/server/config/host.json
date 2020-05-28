@@ -1,10 +1,10 @@
 {
-	"imServerPort"   :  "#{imServerPort}",
-	"elasticSearchHost" :  "#{elasticSearchHost}",
-	"redisHost" :  "#{redisHost}",
-	"dbHost"   :  "#{dbHost}",
-	"dbAccount"   :  "#{dbAccount}",
-	"dbPassword"   :  "#{dbPassword}",
+	"imServerPort"   :  "0.0.0.0:8888",
+	"elasticSearchHost" :  "http://127.0.0.1:9200/",
+	"redisHost" :  "127.0.0.1:6379",
+	"dbHost"   :  "127.0.0.1:3306",
+	"dbAccount"   :  "root",
+	"dbPassword"   :  "root",
 	"sysLog" :  "syslog",
 	"sysErrorLog" :  "syserrorlog",
 	"sysRoomLog" :  "sysroomlog",
@@ -14,11 +14,11 @@
 	"privateGroup" :  "privategroup",
 	"releaseId" : "#{Octopus.Release.Id}",
 	"environmentId" : "#{environmentId}",
-	"uploadPath" : "#{uploadPath}",
-	"linkPath" : "#{linkPath}",
+	"uploadPath" : "/Users/min/Downloads/",
+	"linkPath" : "http://127.0.0.1:8887/",
 	"userCheckUrlMM" : "#{userCheckUrlMM}",
 	"roleUuidAdmin" : "#{roleUuidAdmin}",
 	"roleUuidStreamer" : "#{roleUuidStreamer}",
 	"roleUuidPrivateAndVipAdmin" : "#{roleUuidPrivateAndVipAdmin}",
-	"tokenByTest" : "#{tokenByTest}"
+	"tokenByTest" : "test"
 }

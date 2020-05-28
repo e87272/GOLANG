@@ -14,8 +14,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/olivere/elastic"
 
-	"../database"
-	"../socket"
+	"server/database"
+	"server/socket"
 )
 
 func Sendmessage(conn Conncore, msg []byte) {
@@ -338,7 +338,7 @@ func Hierarchyroomlastmessage(loginUuid string, userUuid string, roomCore socket
 		}
 
 		// Here's how you iterate through results with full control over each step.
-		if searchResult.Hits.TotalHits.Value > 0 {
+		if searchResult.Hits.TotalHits > 0 {
 
 			// Iterate through results
 			for _, hit := range searchResult.Hits.Hits {
@@ -347,7 +347,7 @@ func Hierarchyroomlastmessage(loginUuid string, userUuid string, roomCore socket
 				// Deserialize hit.Source into a Tweet (could also be just a map[string]interface{}).
 				var chatHistory Chathistory
 
-				err := json.Unmarshal(hit.Source, &chatHistory)
+				err := json.Unmarshal(*hit.Source, &chatHistory)
 				if err != nil {
 					// Deserialization failed
 				}
@@ -388,7 +388,7 @@ func Hierarchysidetextlastmessage(loginUuid string, userUuid string, sideTextUui
 		}
 
 		// Here's how you iterate through results with full control over each step.
-		if searchResult.Hits.TotalHits.Value > 0 {
+		if searchResult.Hits.TotalHits > 0 {
 
 			// Iterate through results
 			for _, hit := range searchResult.Hits.Hits {
@@ -397,7 +397,7 @@ func Hierarchysidetextlastmessage(loginUuid string, userUuid string, sideTextUui
 				// Deserialize hit.Source into a Tweet (could also be just a map[string]interface{}).
 				var chatHistory Chathistory
 
-				err := json.Unmarshal(hit.Source, &chatHistory)
+				err := json.Unmarshal(*hit.Source, &chatHistory)
 				if err != nil {
 					// Deserialization failed
 				}

@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"../database"
-	"../socket"
+	"server/database"
+	"server/socket"
 )
 
 func Iplistread(loginUuid string) (string, bool) {

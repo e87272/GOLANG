@@ -11,9 +11,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"../../common"
-	"../../database"
-	"../../socket"
+	"server/common"
+	"server/database"
+	"server/socket"
 )
 
 func Roominfoedit(connCore common.Conncore, msg []byte, loginUuid string) error {
@@ -41,7 +41,7 @@ func Roominfoedit(connCore common.Conncore, msg []byte, loginUuid string) error 
 	}
 	sendRoomInfoEdit.Base_R.Idem = packetRoomInfoEdit.Base_C.Idem
 
-	if loginUuid == userUuid {
+	if loginUuid == userUuid && false {
 		//block處理
 		sendRoomInfoEdit.Base_R.Result = "err"
 		sendRoomInfoEdit.Base_R.Exp = common.Exception("COMMAND_ROOMINFOEDIT_GUEST", userUuid, nil)

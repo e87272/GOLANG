@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"../common"
-	"../database"
+	"server/common"
+	"server/database"
 )
 
 func roomInfoEdit(w http.ResponseWriter, r *http.Request) {
