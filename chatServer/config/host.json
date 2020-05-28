@@ -1,0 +1,11 @@
+{
+	"goServerSocketPort": "8888",
+	"elasticSearchHost": "9200",
+	"redisHost": "6379",
+	"dbHost": "127.0.0.1:3306",
+	"dbAccount": "root",
+	"dbPassword": "root",
+	"sysLog": "socketsyslog",
+	"sysErrorLog": "socketsyserrorlog",
+	"aesKey": "test"
+}

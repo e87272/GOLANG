@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 	"github.com/olivere/elastic"
 
@@ -555,7 +555,7 @@ func loadEnv() {
 
 	// log.Printf("configHost : %v\n", configHost)
 	for k, v := range configHost {
-		// log.Printf("%s : %s\n", k, v)
+		log.Printf("%s : %s\n", k, v)
 		_ = os.Setenv(k, v)
 	}
 }
