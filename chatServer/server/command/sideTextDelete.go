@@ -34,7 +34,7 @@ func Sidetextdelete(connCore common.Conncore, msg []byte, loginUuid string) erro
 	sendSidetextDelete.Base_R.Idem = packetSideTextDelete.Base_C.Idem
 
 	//禁止訪客發話
-	if loginUuid == userPlatform.Useruuid {
+	if loginUuid == userPlatform.Useruuid && false {
 		sendSidetextDelete.Base_R.Result = "err"
 		sendSidetextDelete.Base_R.Exp = common.Exception("COMMAND_SIDETEXTDELETE_GUEST", userUuid, nil)
 		sendSidetextDeleteJson, _ := json.Marshal(sendSidetextDelete)

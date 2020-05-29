@@ -13,7 +13,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 
 	"server/api"
 	"server/command"

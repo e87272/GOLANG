@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 
 	"server/common"
 	"server/socket"
@@ -96,8 +96,8 @@ func Getsidetexthistory(connCore common.Conncore, msg []byte, loginUuid string) 
 	}
 
 	// Here's how you iterate through results with full control over each step.
-	if searchResult.Hits.TotalHits > 0 {
-		chatHistoryList := make([]socket.Chatmessage, 0, searchResult.Hits.TotalHits)
+	if searchResult.TotalHits() > 0 {
+		chatHistoryList := make([]socket.Chatmessage, 0, searchResult.TotalHits())
 
 		// Iterate through results
 		for _, hit := range searchResult.Hits.Hits {
@@ -105,7 +105,7 @@ func Getsidetexthistory(connCore common.Conncore, msg []byte, loginUuid string) 
 			// log.Printf("hit : %+v\n", hit)
 			// Deserialize hit.Source into a Tweet (could also be just a map[string]interface{}).
 			var chatHistory common.Chathistory
-			err := json.Unmarshal(*hit.Source, &chatHistory)
+			err := json.Unmarshal(hit.Source, &chatHistory)
 			if err != nil {
 				// Deserialization failed
 			}
@@ -131,7 +131,7 @@ func Getsidetexthistory(connCore common.Conncore, msg []byte, loginUuid string) 
 
 			historyUuid = chatHistory.Historyuuid
 		}
-		if searchResult.Hits.TotalHits < int64(common.Maxchathistory) {
+		if searchResult.TotalHits() < int64(common.Maxchathistory) {
 			historyUuid = startStampHex
 		}
 		sendSideTextHistory.Payload.Message = chatHistoryList

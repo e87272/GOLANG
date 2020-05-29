@@ -33,7 +33,7 @@ func Frienddelete(connCore common.Conncore, msg []byte, loginUuid string) error 
 	}
 	sendDelete.Base_R.Idem = packetDelete.Base_C.Idem
 
-	if loginUuid == userPlatform.Useruuid {
+	if loginUuid == userPlatform.Useruuid && false {
 		sendDelete.Base_R.Result = "err"
 		sendDelete.Base_R.Exp = common.Exception("COMMAND_FRIENDDELETE_GUEST", userUuid, nil)
 		sendDeleteJson, _ := json.Marshal(sendDelete)

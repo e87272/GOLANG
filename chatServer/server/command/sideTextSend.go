@@ -38,7 +38,7 @@ func Sidetextsend(connCore common.Conncore, msg []byte, loginUuid string) error 
 	sendSidetext.Base_R.Idem = packetSideText.Base_C.Idem
 
 	//禁止訪客發話
-	if loginUuid == userPlatform.Useruuid {
+	if loginUuid == userPlatform.Useruuid && false {
 		//block處理
 		sendSidetext.Base_R.Result = "err"
 		sendSidetext.Base_R.Exp = common.Exception("COMMAND_SIDETEXTSEND_GUEST", userUuid, nil)

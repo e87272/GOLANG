@@ -3,6 +3,7 @@ package commandRoom
 import (
 	"encoding/json"
 	"os"
+	"log"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -38,8 +39,9 @@ func Playersendmsg(connCore common.Conncore, msg []byte, loginUuid string) error
 	}
 	sendPlayerMsg.Base_R.Idem = packetSendMsg.Base_C.Idem
 
+	log.Printf("Playersendmsg packetSendMsg : %+v\n", packetSendMsg)
 	//禁止訪客發話
-	if loginUuid == userPlatform.Useruuid {
+	if loginUuid == userPlatform.Useruuid && false {
 		//block處理
 		sendPlayerMsg.Base_R.Result = "err"
 		sendPlayerMsg.Base_R.Exp = common.Exception("COMMAND_PLAYERSENDMSG_GUEST", userUuid, nil)

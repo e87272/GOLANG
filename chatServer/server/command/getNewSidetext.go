@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 
 	"server/common"
 	"server/socket"
@@ -70,7 +70,7 @@ func Getnewsidetext(connCore common.Conncore, msg []byte, loginUuid string) erro
 
 		var newSidetext socket.Newsidetext
 		newSidetext.Targetuserplatform = sideText.Userplatform
-		newSidetext.Newmessagecount = strconv.FormatInt(searchResult.Hits.TotalHits, 10)
+		newSidetext.Newmessagecount = strconv.FormatInt(searchResult.TotalHits(), 10)
 		newSidetext.Lastmessage = common.Hierarchysidetextlastmessage(loginUuid, userUuid, sideText.Sidetextuuid)
 
 		newSidetextList = append(newSidetextList, newSidetext)

@@ -9,7 +9,7 @@ import (
 
 	"server/common"
 	"server/socket"
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 )
 
 func Clearusermsg(connCore common.Conncore, msg []byte, loginUuid string) error {

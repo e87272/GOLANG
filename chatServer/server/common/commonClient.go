@@ -11,6 +11,7 @@ import (
 )
 
 func Iplistread(loginUuid string) (string, bool) {
+	return "127.0.0.1", true
 	Mutexiplist.Lock()
 	defer Mutexiplist.Unlock()
 	ip, ok := Iplist[loginUuid]

@@ -2,7 +2,7 @@ package commandRoom
 
 import (
 	"encoding/json"
-
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -47,7 +47,7 @@ func Playerenterroom(connCore common.Conncore, msg []byte, loginUuid string) err
 
 	var exception socket.Exception
 
-	// log.Printf("Playerenterroom packetPlayerEnterRoom : %+v\n", packetPlayerEnterRoom)
+	log.Printf("Playerenterroom packetPlayerEnterRoom : %+v\n", packetPlayerEnterRoom)
 
 	if packetPlayerEnterRoom.Payload.Station != "" && packetPlayerEnterRoom.Payload.Ownerplatformuuid != "" {
 		roomUuid, ok, exception = common.Hierarchytokensearch(userUuid, packetPlayerEnterRoom.Payload.Station, packetPlayerEnterRoom.Payload.Ownerplatformuuid, packetPlayerEnterRoom.Payload.Ownerplatform)
@@ -63,8 +63,10 @@ func Playerenterroom(connCore common.Conncore, msg []byte, loginUuid string) err
 		// log.Printf("Playerenterroom Hierarchytokensearch roomUuid : %+v\n", roomUuid)
 		// log.Printf("Playerenterroom Hierarchytokensearch roomType : %+v\n", roomType)
 	} else {
-		roomType = packetPlayerEnterRoom.Payload.Roomtype
-		roomUuid = packetPlayerEnterRoom.Payload.Roomuuid
+		// roomType = packetPlayerEnterRoom.Payload.Roomtype
+		// roomUuid = packetPlayerEnterRoom.Payload.Roomuuid
+		roomType = "liveGroup"
+		roomUuid = "1234567890123456"
 	}
 
 	if roomUuid == "" || len(roomUuid) != 16 {

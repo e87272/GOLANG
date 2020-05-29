@@ -40,7 +40,7 @@ func Playersendforwardmsg(connCore common.Conncore, msg []byte, loginUuid string
 	sendForwardMsg.Base_R.Idem = packetForwardMsg.Base_C.Idem
 
 	//禁止訪客發話
-	if loginUuid == userPlatform.Useruuid {
+	if loginUuid == userPlatform.Useruuid && false {
 		//block處理
 		sendForwardMsg.Base_R.Result = "err"
 		sendForwardMsg.Base_R.Exp = common.Exception("COMMAND_PLAYERSENDFORWARDMSG_GUEST", userUuid, nil)

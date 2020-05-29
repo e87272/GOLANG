@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 
 	"server/common"
 	"server/socket"
@@ -138,7 +138,7 @@ func Playerenterroombatch(connCore common.Conncore, msg []byte, loginUuid string
 			roomBatchrResult[key].Result = common.Exception("COMMAND_PLAYERENTERROOMBATCH_SEARCH_ERROR", userUuid, err).Message
 		}
 
-		roomBatchrResult[key].Newmessagecount = strconv.FormatInt(searchResult.Hits.TotalHits, 10)
+		roomBatchrResult[key].Newmessagecount = strconv.FormatInt(searchResult.TotalHits(), 10)
 		roomBatchrResult[key].Lastmessage = lastMessage
 		roomBatchrResult[key].Roominfo = roomInfo
 		roomBatchrResult[key].Membercount = memberCount

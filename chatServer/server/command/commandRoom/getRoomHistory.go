@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
+	"log"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 
 	"server/common"
 	"server/socket"
@@ -33,6 +34,8 @@ func Getroomhistory(connCore common.Conncore, msg []byte, loginUuid string) erro
 		common.Sendmessage(connCore, sendRoomHistoryJson)
 		return err
 	}
+
+	log.Printf("Getroomhistory : %+v\n", packetRoomHistory)
 
 	sendRoomHistory.Base_R.Idem = packetRoomHistory.Base_C.Idem
 
@@ -76,6 +79,7 @@ func Getroomhistory(connCore common.Conncore, msg []byte, loginUuid string) erro
 	// Search with a term query
 	searchResult, err := common.Elasticclient.Search(os.Getenv(roomCore.Roomtype)).Query(boolQ).Sort("historyUuid", false).Size(common.Maxchathistory).Do(context.Background()) // execute
 
+	log.Printf("common.Elasticclient.Search : %+v\n", err)
 	if err != nil {
 		sendRoomHistory.Base_R.Result = "err"
 		sendRoomHistory.Base_R.Exp = common.Exception("COMMAND_GETROOMHISTORY_ES_SEARCH_ERROR", userUuid, err)
@@ -84,9 +88,11 @@ func Getroomhistory(connCore common.Conncore, msg []byte, loginUuid string) erro
 		return err
 	}
 
+	log.Printf("searchResult : %+v\n", searchResult)
+
 	// Here's how you iterate through results with full control over each step.
-	if searchResult.Hits.TotalHits > 0 {
-		chatHistoryList := make([]socket.Chatmessage, 0, searchResult.Hits.TotalHits)
+	if searchResult.TotalHits() > 0 {
+		chatHistoryList := make([]socket.Chatmessage, 0, searchResult.TotalHits())
 
 		// Iterate through results
 		for _, hit := range searchResult.Hits.Hits {
@@ -94,7 +100,7 @@ func Getroomhistory(connCore common.Conncore, msg []byte, loginUuid string) erro
 			// log.Printf("hit : %+v\n", hit)
 			// Deserialize hit.Source into a Tweet (could also be just a map[string]interface{}).
 			var chatHistory common.Chathistory
-			err := json.Unmarshal(*hit.Source, &chatHistory)
+			err := json.Unmarshal(hit.Source, &chatHistory)
 			if err != nil {
 				// Deserialization failed
 			}
@@ -120,7 +126,7 @@ func Getroomhistory(connCore common.Conncore, msg []byte, loginUuid string) erro
 
 			historyUuid = chatHistory.Historyuuid
 		}
-		if searchResult.Hits.TotalHits < int64(common.Maxchathistory) {
+		if searchResult.TotalHits() < int64(common.Maxchathistory) {
 			historyUuid = startStampHex
 		}
 		sendRoomHistory.Payload.Message = chatHistoryList
