@@ -78,10 +78,10 @@ func main() {
 	common.Eschatinit(os.Getenv("vipGroup"))
 	common.Eschatinit(os.Getenv("privateGroup"))
 
-	// common.Esdelete("roomdirtywordhistory")
-	// common.Esdelete("sidetextdirtywordhistory")
-	common.Eschatinit("roomdirtywordhistory")
-	common.Eschatinit("sidetextdirtywordhistory")
+	// common.Esdelete("mml_roomdirtywordhrdhistory")
+	// common.Esdelete("mml_sidetextdirtywordhistory")
+	common.Eschatinit("mml_roomdirtywordhistory")
+	common.Eschatinit("mml_sidetextdirtywordhistory")
 
 	common.Redisclient = redis.NewClient(&redis.Options{
 		Addr:     os.Getenv("redisHost"),

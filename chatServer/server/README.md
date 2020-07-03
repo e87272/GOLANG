@@ -1,8 +1,16 @@
 # GOLANG
-docker container prune
+docker container prune   使用後要回復ＤＢ資料
+
+docker network create elastic_stack
 # ES
-<p>docker run -d -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:7.7.0<p>
-<p>docker container start docker.elastic.co/elasticsearch/elasticsearch:7.7.0<p>
+<p>docker run -d --name elasticsearch --net elastic_stack -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:7.7.0<p>
+<p>docker container start elasticsearch<p>
+
+# kibana
+<p>docker run -d --name kibana --net elastic_stack -p 5601:5601 docker.elastic.co/kibana/kibana:7.7.0<p>
+<p>docker container start kibana<p>
+
+
 
 # redis
 <p>docker run -d --name redis-lab -p 6379:6379 redis<p>
