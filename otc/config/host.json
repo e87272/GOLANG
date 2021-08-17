@@ -1,0 +1,10 @@
+{
+	"serverPort": "0.0.0.0:8080",
+	"dbHost": "127.0.0.1:3306",
+	"dbAccount": "root",
+	"dbPassword": "root",
+	"dbName": "otc",
+	"maxLifetime": "180",
+	"maxOpenConns": "10",
+	"maxIdleConns": "10"
+}
