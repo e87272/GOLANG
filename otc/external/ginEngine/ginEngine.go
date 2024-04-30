@@ -27,7 +27,7 @@ func GinInit() {
 	config.AddAllowHeaders("token")
 	GinEngine.Use(cors.New(config))
 
-	GinEngine.Use(log)
+	GinEngine.Use(esLog)
 
 	// healthcheck
 	GinEngine.GET("/healthcheck", healthCheck)
@@ -39,7 +39,7 @@ func healthCheck(c *gin.Context) {
 	c.String(http.StatusOK, "healthCheck ver : "+os.Getenv("version"))
 }
 
-func log(context *gin.Context) {
+func esLog(context *gin.Context) {
 
 	if context.HandlerName() != "server/external/ginEngine.healthCheck" {
 		context.PostForm("")
